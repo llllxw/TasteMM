@@ -30,9 +30,7 @@ def parse_folds(folds_str: str):
 
 
 def build_model_tag(args) -> str:
-    pre_flag = int(not args.skip_pretrain)
-    gaux = str(args.graph_aux_weight).replace(".", "p")
-    return f"baseline_gatv2_rich_pre{pre_flag}_gaux{gaux}_gwarm{args.graph_warmup_epochs}"
+    return "baseline"
 
 
 def build_run_name(fold: int, seed: int, args) -> str:

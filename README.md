@@ -76,5 +76,5 @@ python train_5fold.py --out_dir runs --summary_csv results/baseline_5fold_summar
 Run prediction:
 
 ```bash
-python predict.py --run_dir runs/fold0_seed42_baseline_gatv2_rich_pre1_gaux0p2_gwarm30 --input_csv /path/to/new_data.csv
+python predict.py --run_dir runs/fold0_seed42_baseline --input_csv /path/to/new_data.csv
 ```

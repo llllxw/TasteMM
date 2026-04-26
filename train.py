@@ -113,9 +113,7 @@ def build_run_config(args) -> RunConfig:
 
 
 def build_model_tag(config: RunConfig) -> str:
-    pre_flag = int(not config.skip_pretrain)
-    gaux = str(config.graph_aux_weight).replace(".", "p")
-    return f"baseline_gatv2_rich_pre{pre_flag}_gaux{gaux}_gwarm{config.graph_warmup_epochs}"
+    return "baseline"
 
 
 def build_run_name(config: RunConfig) -> str:
