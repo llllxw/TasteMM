@@ -60,22 +60,28 @@ def brier_top1(probs: np.ndarray, y_true: np.ndarray) -> float:
 
 
 def classwise_brier_score(probs: np.ndarray, y_true: np.ndarray) -> dict:
-    out = {}
-    for cls in np.unique(y_true):
-        mask = y_true == cls
-        out[int(cls)] = brier_score(probs[mask], y_true[mask]) if mask.sum() >= 5 else float("nan")
-    return out
+    return {
+        cls: float(np.mean((probs[:, cls] - (y_true == cls).astype(float)) ** 2))
+        for cls in range(probs.shape[1])
+    }
 
 
 def classwise_ece_top1(probs: np.ndarray, y_true: np.ndarray, n_bins: int = 15) -> dict:
     out = {}
-    for cls in np.unique(y_true):
-        mask = y_true == cls
-        out[int(cls)] = ece_top1(probs[mask], y_true[mask], n_bins=n_bins) if mask.sum() >= 5 else float("nan")
+    bins = np.linspace(0.0, 1.0, n_bins + 1)
+    for cls in range(probs.shape[1]):
+        confidence = probs[:, cls]
+        observed = (y_true == cls).astype(float)
+        value = 0.0
+        for idx in range(n_bins):
+            mask = (confidence > bins[idx]) & (confidence <= bins[idx + 1])
+            if np.any(mask):
+                value += abs(float(observed[mask].mean()) - float(confidence[mask].mean())) * float(mask.mean())
+        out[cls] = float(value)
     return out
 
 
-def classwise_brier_top1(probs: np.ndarray, y_true: np.ndarray) -> dict:
+def true_class_conditioned_brier_top1(probs: np.ndarray, y_true: np.ndarray) -> dict:
     out = {}
     for cls in np.unique(y_true):
         mask = y_true == cls
@@ -155,7 +161,7 @@ def selective_metrics(conf: np.ndarray, y_true: np.ndarray, y_pred: np.ndarray, 
     return out
 
 
-def classwise_selective_metrics(conf: np.ndarray, y_true: np.ndarray, y_pred: np.ndarray) -> dict:
+def true_class_conditioned_selective_metrics(conf: np.ndarray, y_true: np.ndarray, y_pred: np.ndarray) -> dict:
     out = {}
     for cls in np.unique(y_true):
         mask = y_true == cls

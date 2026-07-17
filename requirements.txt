@@ -1,0 +1,18 @@
+# Reconstructed GPU environment used for the reported TasteMM experiments.
+# Python 3.10 is required because several pinned releases no longer support Python 3.8.
+# Install the CUDA 12.1 PyTorch/PyG wheels before the remaining packages; see README.md.
+numpy==1.26.4
+pandas==2.3.1
+scikit-learn==1.6.1
+scipy==1.13.1
+matplotlib==3.9.4
+seaborn==0.13.2
+transformers==4.57.1
+tokenizers==0.22.1
+rdkit==2025.3.5
+Pillow==10.4.0
+tqdm==4.67.1
+umap-learn==0.5.7
+PyYAML==6.0.3
+huggingface-hub==0.36.0
+safetensors==0.6.2

@@ -19,7 +19,62 @@ from rdkit import Chem
 from rdkit.Chem import Draw
 from rdkit.Chem.Draw import SimilarityMaps
 
-from plot_atom_attribution_reference_style import choose_score_column, load_data, prepare_render_rows
+
+
+def choose_score_column(atom_df: pd.DataFrame, requested: str = "") -> str:
+    if requested:
+        if requested not in atom_df.columns:
+            raise ValueError(f"Requested score column {requested!r} is not present in the atom table.")
+        return requested
+    for candidate in ("attribution_score_signed", "attribution_score", "attribution_score_abs"):
+        if candidate in atom_df.columns:
+            return candidate
+    raise ValueError("No supported attribution score column was found.")
+
+
+def load_data(csv_path: str, structure_map: str, smiles_col: str, mol_id_col: str, mol_name_col: str):
+    atom_df = pd.read_csv(csv_path)
+    structure_df = pd.read_csv(structure_map)
+    required_atom = {mol_id_col, "atom_index"}
+    required_structure = {mol_id_col, smiles_col}
+    if not required_atom.issubset(atom_df.columns):
+        raise ValueError(f"Atom table must contain {sorted(required_atom)}.")
+    if not required_structure.issubset(structure_df.columns):
+        raise ValueError(f"Selected-sample table must contain {sorted(required_structure)}.")
+    if mol_name_col not in structure_df.columns:
+        structure_df[mol_name_col] = structure_df[mol_id_col].astype(str)
+    return atom_df, structure_df, {"structure_source": structure_map}
+
+
+def prepare_render_rows(atom_df: pd.DataFrame, structure_df: pd.DataFrame):
+    rows = []
+    skipped = []
+    for _, structure in structure_df.iterrows():
+        molecule_id = structure["id"]
+        if "row_index" in structure_df.columns and "row_index" in atom_df.columns:
+            atom_rows = atom_df[atom_df["row_index"].astype(int) == int(structure["row_index"])].copy()
+        else:
+            if structure_df["id"].astype(str).duplicated().any():
+                raise ValueError("Duplicate IDs require row_index columns in both attribution inputs.")
+            atom_rows = atom_df[atom_df["id"].astype(str) == str(molecule_id)].copy()
+        smiles = str(structure["smiles"])
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is None or atom_rows.empty or len(atom_rows) != mol.GetNumAtoms():
+            skipped.append(str(molecule_id))
+            continue
+        rows.append(
+            {
+                "id": molecule_id,
+                "name": structure.get("name", molecule_id),
+                "mol": mol,
+                "atom_rows": atom_rows,
+                "target_label_name": structure.get("target_label_name", ""),
+                "true_label_name": structure.get("true_label_name", ""),
+            }
+        )
+    if not rows:
+        raise ValueError("No valid molecule-attribution rows were available for rendering.")
+    return rows, skipped
 
 
 @dataclass
@@ -172,22 +227,22 @@ def render_panel(panel_rows: list[dict[str, Any]], output_dir: Path, score_col: 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Render a panel using the same SimilarityMaps workflow as interpretability-plots.ipynb"
+        description="Render gradient-attribution panels with RDKit SimilarityMaps."
     )
     parser.add_argument(
         "--csv",
         type=str,
-        default="/home/xwliu/multi/last/results/outputs_atom_blob_style_v9/integrated_gradients_atom_scores.csv",
+        required=True,
     )
     parser.add_argument(
         "--selected-csv",
         type=str,
-        default="/home/xwliu/multi/last/results/outputs_atom_blob_style_v9/integrated_gradients_selected_samples.csv",
+        required=True,
     )
     parser.add_argument(
         "--outdir",
         type=str,
-        default="/home/xwliu/multi/last/results/outputs_atom_blob_style_v9/similarity_style_like_tmp2212",
+        required=True,
     )
     parser.add_argument("--score-col", type=str, default="")
     return parser.parse_args()
@@ -219,14 +274,12 @@ def main() -> None:
     outputs = render_panel(panel_rows, output_dir=output_dir, score_col=score_col, config=config)
 
     meta = {
-        "template_notebook": "/home/xwliu/multi/last/interpretability-plots.ipynb",
-        "inference_note": (
-            "This rendering follows the notebook workflow in interpretability-plots.ipynb: "
+        "rendering_note": (
+            "This rendering uses the public RDKit workflow: "
             "MolFromSmiles -> Compute2DCoords -> MolDraw2DCairo -> useBWAtomPalette -> "
             "SimilarityMaps.GetSimilarityMapFromWeights(...). "
             "The current version keeps all atom contributions visible and sorts panels by model label 1..6."
         ),
-        "reference_image": "/home/xwliu/multi/last/results/tmp_similarity_test_2212.png",
         "source_atom_csv": args.csv,
         "source_structure_csv": args.selected_csv,
         "score_col": score_col,

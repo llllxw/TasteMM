@@ -1,0 +1,30 @@
+{
+  "task": "scope3_bitter_sweet_tasteless_10650",
+  "n_rows": 10650,
+  "class_counts": {
+    "tasteless": 5010,
+    "bitter": 3005,
+    "sweet": 2635
+  },
+  "source_to_scope_label": {
+    "1": 1,
+    "2": 2,
+    "6": 3
+  },
+  "scope_label_mapping": {
+    "1": "bitter",
+    "2": "sweet",
+    "3": "tasteless"
+  },
+  "test_rows_per_fold": {
+    "0": 1065,
+    "1": 1065,
+    "2": 1065,
+    "3": 1065,
+    "4": 1065
+  },
+  "warning": "This reproduces the matched 80/10/10 row-level split logic; repeated structures are not grouped.",
+  "source_file": "compound.csv",
+  "source_file_sha256": "2e7ac451259da567d370701ca8e7c8a3d800449405620b132b9868b2434e242d",
+  "split_manifest_sha256": "05e640b01c498ab98caab8c1d8261b6d217d6ae26469ea8cf59f3efe09aacd59"
+}

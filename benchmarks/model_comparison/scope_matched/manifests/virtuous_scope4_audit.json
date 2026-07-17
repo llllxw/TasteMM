@@ -1,0 +1,35 @@
+{
+  "task": "scope4_bitter_sweet_umami_other_12706",
+  "n_rows": 12706,
+  "class_counts": {
+    "other": 6738,
+    "bitter": 3005,
+    "sweet": 2635,
+    "umami": 328
+  },
+  "source_to_scope_label": {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 4,
+    "6": 4
+  },
+  "scope_label_mapping": {
+    "1": "bitter",
+    "2": "sweet",
+    "3": "umami",
+    "4": "other"
+  },
+  "test_rows_per_fold": {
+    "0": 1271,
+    "1": 1271,
+    "2": 1271,
+    "3": 1271,
+    "4": 1271
+  },
+  "warning": "This reproduces the matched 80/10/10 row-level split logic; repeated structures are not grouped.",
+  "source_file": "compound.csv",
+  "source_file_sha256": "2e7ac451259da567d370701ca8e7c8a3d800449405620b132b9868b2434e242d",
+  "split_manifest_sha256": "89e54767c03aed6d095f37e2544c1f8fd5f0be8b65bfdd30cb38779766c66cab"
+}
