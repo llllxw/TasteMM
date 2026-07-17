@@ -123,7 +123,11 @@ def project_embeddings(emb: np.ndarray, method: str, random_state: int, perplexi
     if method in {"auto", "umap"}:
         try:
             import umap  # type: ignore
-
+        except ImportError:
+            if method == "umap":
+                raise
+            used_method = "tsne"
+        else:
             reducer = umap.UMAP(
                 n_components=2,
                 n_neighbors=25,
@@ -133,10 +137,6 @@ def project_embeddings(emb: np.ndarray, method: str, random_state: int, perplexi
             )
             coords = reducer.fit_transform(x)
             return coords, "umap"
-        except Exception:
-            if method == "umap":
-                raise
-            used_method = "tsne"
 
     tsne = TSNE(
         n_components=2,

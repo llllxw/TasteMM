@@ -1,0 +1,60 @@
+{
+  "source_file": "compound.csv",
+  "source_file_sha256": "2e7ac451259da567d370701ca8e7c8a3d800449405620b132b9868b2434e242d",
+  "split_manifest_sha256": "edf55f145802a0f8a83c8af4a651bb1891979ace0b74255ad2cb9bca3119cf79",
+  "n_rows": 12706,
+  "n_unique_ids": 9506,
+  "n_unique_smiles": 12321,
+  "missing_id_rows": 3201,
+  "duplicate_nonmissing_id_rows_beyond_first": 0,
+  "duplicate_smiles_rows_beyond_first": 385,
+  "class_counts": {
+    "bitter": 3005,
+    "sweet": 2635,
+    "umami": 328,
+    "salty": 28,
+    "sour": 1700,
+    "tasteless": 5010
+  },
+  "split_method": "Exact reproduction of TasteMM row-level StratifiedKFold(5, shuffle=True, random_state=42), then held-out half split",
+  "test_rows_per_fold": {
+    "0": 1271,
+    "1": 1271,
+    "2": 1271,
+    "3": 1271,
+    "4": 1271
+  },
+  "canonical_structure_overlap": {
+    "0": {
+      "test_rows": 1271,
+      "test_rows_with_structure_in_train": 307,
+      "fraction_test_rows_with_structure_in_train": 0.24154209284028325,
+      "unique_test_structures_also_in_train": 302
+    },
+    "1": {
+      "test_rows": 1271,
+      "test_rows_with_structure_in_train": 291,
+      "fraction_test_rows_with_structure_in_train": 0.22895357985837922,
+      "unique_test_structures_also_in_train": 281
+    },
+    "2": {
+      "test_rows": 1271,
+      "test_rows_with_structure_in_train": 312,
+      "fraction_test_rows_with_structure_in_train": 0.24547600314712825,
+      "unique_test_structures_also_in_train": 307
+    },
+    "3": {
+      "test_rows": 1271,
+      "test_rows_with_structure_in_train": 282,
+      "fraction_test_rows_with_structure_in_train": 0.2218725413060582,
+      "unique_test_structures_also_in_train": 278
+    },
+    "4": {
+      "test_rows": 1271,
+      "test_rows_with_structure_in_train": 287,
+      "fraction_test_rows_with_structure_in_train": 0.22580645161290322,
+      "unique_test_structures_also_in_train": 282
+    }
+  },
+  "warning": "Repeated structures may cross folds because the original TasteMM split was row-level."
+}

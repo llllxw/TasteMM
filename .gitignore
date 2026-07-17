@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.idea/
+.vscode/
+data/Multi/processed/
+runs/
+results/predictions/
+*.pth
+*.pt
+*.npy
+*.joblib
+benchmarks/model_comparison/cache/
+benchmarks/model_comparison/scope_matched/cache/
+benchmarks/model_comparison/**/fold*_checkpoints/
+benchmarks/model_comparison/**/fold*_best_model/

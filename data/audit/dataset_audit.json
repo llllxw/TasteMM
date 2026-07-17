@@ -1,0 +1,26 @@
+{
+  "input_file": "data\\compound.csv",
+  "rows": 12706,
+  "columns": [
+    "ID",
+    "Name",
+    "SMILES",
+    "Label"
+  ],
+  "invalid_smiles_rows": 0,
+  "missing_id_rows": 3201,
+  "duplicate_nonmissing_id_rows": 0,
+  "duplicate_exact_smiles_rows": 715,
+  "unique_canonical_smiles": 10798,
+  "canonical_structures_with_multiple_labels": 115,
+  "rows_in_cross_label_structures": 282,
+  "class_counts": {
+    "bitter": 3005,
+    "sweet": 2635,
+    "umami": 328,
+    "salty": 28,
+    "sour": 1700,
+    "tasteless": 5010
+  },
+  "interpretation_note": "This audit describes the released final table. It cannot recover how many records were excluded during source harmonization unless the pre-curation master table and exclusion log are also available. Missing source IDs are not counted as duplicate identifiers; row_index is the stable modeling key."
+}

@@ -24,6 +24,7 @@ class TasteBaselineModel(nn.Module):
         self.dropout = dropout
         self.mixfp_dim = mixfp_dim
         self.bert_dim = bert_dim
+        self.edge_attr_dim = edge_attr_dim
 
         self.gat1_heads = 8
         self.gat1 = GATv2Conv(
@@ -84,7 +85,11 @@ class TasteBaselineModel(nn.Module):
     @staticmethod
     def _ensure_2d(feat: torch.Tensor, dim: int) -> torch.Tensor:
         if feat.dim() == 1:
-            return feat.unsqueeze(0)
+            if feat.numel() % dim != 0:
+                raise ValueError(
+                    f"Cannot reshape a flat feature tensor with {feat.numel()} values into rows of {dim}."
+                )
+            return feat.reshape(-1, dim)
         if feat.dim() == 2 and feat.size(-1) == dim:
             return feat
         raise ValueError(f"Expected feature shape [B,{dim}] or [{dim}], got {tuple(feat.shape)}")
@@ -93,7 +98,7 @@ class TasteBaselineModel(nn.Module):
         x, edge_index, batch = data.x, data.edge_index, data.batch
         edge_attr = getattr(data, "edge_attr", None)
         if edge_attr is None:
-            edge_attr = torch.zeros((edge_index.size(1), 18), device=x.device, dtype=x.dtype)
+            edge_attr = torch.zeros((edge_index.size(1), self.edge_attr_dim), device=x.device, dtype=x.dtype)
 
         gx = self.gat1(x, edge_index, edge_attr=edge_attr)
         gx = F.elu(gx)
@@ -108,6 +113,8 @@ class TasteBaselineModel(nn.Module):
         graph_feat = torch.cat([gap(gx, batch), gmp(gx, batch)], dim=-1)
         graph_feat = self.graph_proj(graph_feat)
         graph_feat = F.relu(graph_feat)
+        # These final modality normalizations are part of the released/trained architecture.
+        # For fingerprint/BERT they follow the projection-block LayerNorm by design.
         graph_feat = F.layer_norm(graph_feat, graph_feat.shape[1:])
 
         mixfp = self._ensure_2d(data.mixfp, self.mixfp_dim)

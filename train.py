@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import platform
+import subprocess
 import time
 from dataclasses import asdict, dataclass
 
+os.environ.setdefault("USE_TF", "0")
+
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -17,12 +23,12 @@ from calibration_metrics import (
     brier_score,
     brier_top1,
     classwise_brier_score,
-    classwise_brier_top1,
     classwise_ece_top1,
-    classwise_selective_metrics,
     ece_top1,
     reliability_bins_top1,
     selective_metrics,
+    true_class_conditioned_brier_top1,
+    true_class_conditioned_selective_metrics,
 )
 from confidence_methods import conf_margin_from_logits, softmax_np, temperature_scale_logits
 from loss import SupConHardLoss
@@ -34,13 +40,13 @@ from tools import (
     EMBED_DIM,
     FINETUNE_EPOCHS,
     GAT_DIM,
-    MODEL_SAVE_DIR,
     PATIENCE,
     PRETRAIN_EPOCHS,
     PROCESSED_DIR,
     TEMPERATURE,
-    ensure_dirs,
     setup_seed,
+    training_config_tag,
+    training_run_name,
 )
 
 
@@ -54,20 +60,48 @@ class RunConfig:
     graph_warmup_lr: float
     out_dir: str
     num_classes: int
+    processed_dir: str
 
 
 def to_py(obj):
     if isinstance(obj, np.generic):
-        return obj.item()
+        return to_py(obj.item())
     if isinstance(obj, np.ndarray):
-        return obj.tolist()
+        return to_py(obj.tolist())
     if torch.is_tensor(obj):
-        return obj.detach().cpu().numpy().tolist()
+        return to_py(obj.detach().cpu().numpy().tolist())
     if isinstance(obj, dict):
         return {str(k): to_py(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
         return [to_py(item) for item in obj]
+    if isinstance(obj, float) and not np.isfinite(obj):
+        return None
     return obj
+
+
+def sha256_file(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def trusted_torch_load(path: str):
+    try:
+        return torch.load(path, map_location="cpu", weights_only=False)
+    except TypeError:  # PyTorch versions before weights_only was exposed.
+        return torch.load(path, map_location="cpu")
+
+
+def git_commit() -> str | None:
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True,
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
 
 
 def save_run_artifacts(run_dir: str, payload_json: dict, arrays: dict) -> None:
@@ -75,9 +109,22 @@ def save_run_artifacts(run_dir: str, payload_json: dict, arrays: dict) -> None:
     art_dir = os.path.join(run_dir, "artifacts")
     os.makedirs(art_dir, exist_ok=True)
     with open(os.path.join(run_dir, "result.json"), "w", encoding="utf-8") as f:
-        json.dump(to_py(payload_json), f, ensure_ascii=False, indent=2)
+        json.dump(to_py(payload_json), f, ensure_ascii=False, indent=2, allow_nan=False)
     for name, arr in arrays.items():
         np.save(os.path.join(art_dir, f"{name}.npy"), arr)
+
+
+def save_test_prediction_csv(run_dir: str, arrays: dict, num_classes: int) -> None:
+    prediction_frame = {
+        "row_index": arrays["test_row_indices"],
+        "true_label_zero_based": arrays["test_labels"],
+        "pred_label_zero_based": arrays["test_probs_raw"].argmax(axis=1),
+    }
+    for class_index in range(num_classes):
+        prediction_frame[f"prob_class_{class_index}"] = arrays["test_probs_raw"][:, class_index]
+    pd.DataFrame(prediction_frame).to_csv(
+        os.path.join(run_dir, "artifacts", "test_predictions.csv"), index=False, encoding="utf-8-sig"
+    )
 
 
 def get_args():
@@ -90,10 +137,15 @@ def get_args():
     parser.add_argument("--graph_warmup_lr", type=float, default=1e-4)
     parser.add_argument("--out_dir", type=str, default="runs")
     parser.add_argument("--num_classes", type=int, default=6)
+    parser.add_argument("--processed_dir", type=str, default=PROCESSED_DIR)
     return parser.parse_args()
 
 
 def build_run_config(args) -> RunConfig:
+    if args.fold not in range(5):
+        raise ValueError("--fold must be one of 0,1,2,3,4.")
+    if args.num_classes < 2:
+        raise ValueError("--num_classes must be at least 2.")
     if args.graph_aux_weight < 0:
         raise ValueError("graph_aux_weight must be non-negative.")
     if args.graph_warmup_epochs < 0:
@@ -109,22 +161,32 @@ def build_run_config(args) -> RunConfig:
         graph_warmup_lr=float(args.graph_warmup_lr),
         out_dir=str(args.out_dir),
         num_classes=int(args.num_classes),
+        processed_dir=os.path.abspath(args.processed_dir),
     )
 
 
 def build_model_tag(config: RunConfig) -> str:
-    return "baseline"
+    return training_config_tag(asdict(config))
 
 
-def build_run_name(config: RunConfig) -> str:
-    return f"fold{config.fold}_seed{config.seed}_{build_model_tag(config)}"
-
-
-def load_fold_data(fold: int):
-    fold_dir = os.path.join(PROCESSED_DIR, f"fold_{fold}")
-    train_data = torch.load(os.path.join(fold_dir, "train_pyg.pt"))
-    val_data = torch.load(os.path.join(fold_dir, "val_pyg.pt"))
-    test_data = torch.load(os.path.join(fold_dir, "test_pyg.pt"))
+def load_fold_data(fold: int, processed_dir: str):
+    fold_dir = os.path.join(processed_dir, f"fold_{fold}")
+    train_data = trusted_torch_load(os.path.join(fold_dir, "train_pyg.pt"))
+    val_data = trusted_torch_load(os.path.join(fold_dir, "val_pyg.pt"))
+    test_data = trusted_torch_load(os.path.join(fold_dir, "test_pyg.pt"))
+    for split_name, dataset in (("train", train_data), ("validation", val_data), ("test", test_data)):
+        if not dataset:
+            raise ValueError(f"Fold {fold} {split_name} processed dataset is empty.")
+        if not all(hasattr(item, "row_index") for item in dataset):
+            raise RuntimeError("Processed samples lack row_index. Regenerate them with the current data_process.py.")
+    manifest_path = os.path.join(fold_dir, "split_manifest.csv")
+    if os.path.exists(manifest_path):
+        manifest = pd.read_csv(manifest_path)
+        for split_name, dataset in (("train", train_data), ("validation", val_data), ("test", test_data)):
+            expected = manifest.loc[manifest["split"] == split_name, "row_index"].astype(int).to_numpy()
+            observed = np.asarray([int(item.row_index.reshape(-1)[0].item()) for item in dataset])
+            if not np.array_equal(observed, expected):
+                raise ValueError(f"Fold {fold} {split_name} PyG order does not match split_manifest.csv.")
     train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, drop_last=False)
     val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=False, drop_last=False)
     test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=False, drop_last=False)
@@ -163,7 +225,9 @@ def enable_all_requires_grad(model) -> None:
 def make_class_weights(train_data, num_classes: int, device):
     train_labels = [int(d.y.item()) for d in train_data]
     class_counts = np.bincount(train_labels, minlength=num_classes)
-    weights = [len(train_labels) / (num_classes * max(int(count), 1)) * 10 for count in class_counts]
+    if len(class_counts) != num_classes or np.any(class_counts == 0):
+        raise ValueError(f"Training partition must contain all {num_classes} classes; counts={class_counts.tolist()}")
+    weights = [len(train_labels) / (num_classes * max(int(count), 1)) for count in class_counts]
     return torch.tensor(weights, dtype=torch.float32, device=device)
 
 
@@ -231,6 +295,8 @@ def finetune_classification(model, train_loader, val_loader, optimizer, device, 
             labels = data.y.reshape(-1)
             logits = model(data, mode="classify")
             main_loss = criterion(logits, labels)
+            # The reported model used a separate stochastic forward pass for the graph auxiliary
+            # head. Keeping it explicit preserves its independent dropout mask and checkpoint behavior.
             graph_aux_logits = model(data, mode="graph_aux")
             aux_loss = criterion(graph_aux_logits, labels)
             loss = main_loss + graph_aux_weight * aux_loss
@@ -272,16 +338,34 @@ def finetune_classification(model, train_loader, val_loader, optimizer, device, 
     return model, train_losses, graph_aux_losses, val_f1_history
 
 
-def collect_logits_labels(model, loader, device):
+def collect_outputs(model, loader, device, include_features=False):
     model.eval()
     logits_list = []
     labels_list = []
+    row_indices = []
+    fused_list = []
+    graph_list = []
     with torch.no_grad():
         for data in loader:
             data = data.to(device)
-            logits_list.append(model(data, mode="classify").cpu().numpy())
+            fused, graph = model.encode(data)
+            logits_list.append(model.class_head(fused).cpu().numpy())
             labels_list.append(data.y.reshape(-1).cpu().numpy())
-    return np.concatenate(logits_list, axis=0), np.concatenate(labels_list, axis=0).astype(int)
+            if not hasattr(data, "row_index"):
+                raise RuntimeError("Processed samples lack row_index. Regenerate them with data_process.py.")
+            row_indices.append(data.row_index.reshape(-1).cpu().numpy())
+            if include_features:
+                fused_list.append(fused.cpu().numpy())
+                graph_list.append(graph.cpu().numpy())
+    outputs = {
+        "logits": np.concatenate(logits_list, axis=0),
+        "labels": np.concatenate(labels_list, axis=0).astype(int),
+        "row_indices": np.concatenate(row_indices, axis=0).astype(int),
+    }
+    if include_features:
+        outputs["fused_embeddings"] = np.concatenate(fused_list, axis=0)
+        outputs["graph_embeddings"] = np.concatenate(graph_list, axis=0)
+    return outputs
 
 
 def fit_temperature_gridsearch(val_logits: np.ndarray, val_labels: np.ndarray) -> float:
@@ -299,10 +383,13 @@ def fit_temperature_gridsearch(val_logits: np.ndarray, val_labels: np.ndarray) -
 
 
 def evaluate_confbest(model, val_loader, test_loader, device):
-    val_logits, val_labels = collect_logits_labels(model, val_loader, device)
+    val_outputs = collect_outputs(model, val_loader, device)
+    val_logits, val_labels = val_outputs["logits"], val_outputs["labels"]
     temperature = fit_temperature_gridsearch(val_logits, val_labels)
 
-    test_logits, test_labels = collect_logits_labels(model, test_loader, device)
+    test_outputs = collect_outputs(model, test_loader, device, include_features=True)
+    test_logits, test_labels = test_outputs["logits"], test_outputs["labels"]
+    test_probs_raw = softmax_np(test_logits)
     test_logits_ts = temperature_scale_logits(test_logits, temperature)
     test_probs_ts = softmax_np(test_logits_ts)
     test_pred = test_probs_ts.argmax(axis=1)
@@ -318,35 +405,41 @@ def evaluate_confbest(model, val_loader, test_loader, device):
             "reliability_bins15": reliability_bins_top1(test_probs_ts, test_labels, n_bins=15),
             "classwise_ece15": classwise_ece_top1(test_probs_ts, test_labels, n_bins=15),
             "classwise_brier": classwise_brier_score(test_probs_ts, test_labels),
-            "classwise_brier_top1": classwise_brier_top1(test_probs_ts, test_labels),
+            "true_class_conditioned_brier_top1": true_class_conditioned_brier_top1(test_probs_ts, test_labels),
         },
         "margin": {
             "selective": selective_metrics(test_conf_margin, test_labels, test_pred, include_curve=True),
-            "classwise_selective": classwise_selective_metrics(test_conf_margin, test_labels, test_pred),
+            "true_class_conditioned_selective": true_class_conditioned_selective_metrics(
+                test_conf_margin, test_labels, test_pred
+            ),
         },
     }
     arrays = {
         "val_logits": val_logits,
         "val_labels": val_labels,
+        "val_row_indices": val_outputs["row_indices"],
         "test_logits": test_logits,
         "test_labels": test_labels,
+        "test_row_indices": test_outputs["row_indices"],
+        "test_probs_raw": test_probs_raw,
         "test_probs_ts": test_probs_ts,
         "test_conf_margin": test_conf_margin,
         "test_conf_ts_maxprob": test_probs_ts.max(axis=1),
+        "test_fused_embeddings": test_outputs["fused_embeddings"],
+        "test_graph_embeddings": test_outputs["graph_embeddings"],
     }
     return metrics, confidence, arrays
 
 
 def main():
     args = get_args()
-    ensure_dirs()
     setup_seed(args.seed)
 
     config = build_run_config(args)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    train_loader, val_loader, test_loader, train_data = load_fold_data(config.fold)
+    train_loader, val_loader, test_loader, train_data = load_fold_data(config.fold, config.processed_dir)
 
-    run_name = build_run_name(config)
+    run_name = training_run_name(config.fold, config.seed, asdict(config))
     run_dir = os.path.join(config.out_dir, run_name)
     ckpt_dir = os.path.join(run_dir, "checkpoints")
     os.makedirs(ckpt_dir, exist_ok=True)
@@ -401,18 +494,19 @@ def main():
 
     best_ckpt_path = os.path.join(ckpt_dir, "best_classify_model.pth")
     torch.save(model.state_dict(), best_ckpt_path)
-    os.makedirs(MODEL_SAVE_DIR, exist_ok=True)
-    torch.save(model.state_dict(), os.path.join(MODEL_SAVE_DIR, f"best_classify_model_{run_name}.pth"))
-
     test_metrics, confidence_block, arrays = evaluate_confbest(model, val_loader, test_loader, device)
+    manifest_path = os.path.join(config.processed_dir, f"fold_{config.fold}", "split_manifest.csv")
+    processing_metadata_path = os.path.join(config.processed_dir, "processing_metadata.json")
+    checkpoint_relpath = os.path.relpath(best_ckpt_path, run_dir).replace("\\", "/")
     payload = {
         "config": asdict(config),
         "timestamp": int(time.time()),
-        "run_dir": run_dir,
+        "run_dir": os.path.abspath(run_dir),
         "run_name": run_name,
         "model_tag": build_model_tag(config),
         "checkpoints": {
-            "best_classify_model": best_ckpt_path,
+            "best_classify_model": checkpoint_relpath,
+            "sha256": sha256_file(best_ckpt_path),
         },
         "temperature_T": confidence_block["ts"]["T"],
         "metrics": test_metrics,
@@ -433,8 +527,29 @@ def main():
                 "graph_warmup_epochs": config.graph_warmup_epochs,
             },
         },
+        "provenance": {
+            "git_commit": git_commit(),
+            "python": platform.python_version(),
+            "torch": torch.__version__,
+            "cuda_available": torch.cuda.is_available(),
+            "cuda_version": torch.version.cuda,
+            "device": str(device),
+            "device_name": torch.cuda.get_device_name(device) if device.type == "cuda" else platform.processor(),
+            "split_manifest_sha256": sha256_file(manifest_path) if os.path.exists(manifest_path) else None,
+            "processing_metadata_sha256": (
+                sha256_file(processing_metadata_path) if os.path.exists(processing_metadata_path) else None
+            ),
+            "batch_size": BATCH_SIZE,
+            "pretrain_epochs_max": PRETRAIN_EPOCHS,
+            "finetune_epochs_max": FINETUNE_EPOCHS,
+            "patience": PATIENCE,
+            "contrastive_temperature": TEMPERATURE,
+            "pretrain_optimizer": {"name": "Adam", "learning_rate": 5e-6, "weight_decay": 1e-5},
+            "finetune_optimizer": {"name": "Adam", "learning_rate": 3e-6, "weight_decay": 1e-4},
+        },
     }
     save_run_artifacts(run_dir, payload, arrays)
+    save_test_prediction_csv(run_dir, arrays, config.num_classes)
 
     print(f"[DONE] Run saved to: {run_dir}")
     print(

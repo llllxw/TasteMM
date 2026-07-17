@@ -1,33 +1,32 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+
+os.environ.setdefault("USE_TF", "0")
 
 import numpy as np
 import pandas as pd
 import torch
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
-from transformers import BertModel, BertTokenizer
 
 from confidence_methods import conf_margin_from_logits, softmax_np, temperature_scale_logits
 from data_process import (
     EDGE_FEATURE_DIM,
     NODE_FEATURE_DIM,
+    encode_smiles_bert,
     get_mix_fingerprint,
-    mean_pool_last_hidden_state,
     mol_from_smiles,
     smiles_to_graph,
 )
 from model import TasteBaselineModel
-from tools import RESULTS_DIR, ensure_dirs, setup_seed
+from tools import RESULTS_DIR, setup_seed
 
 
-setup_seed(42)
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-BERT_MODEL_NAME = "bert-base-uncased"
-MAX_LEN = 128
 LABEL_MAP = {
     0: "bitter",
     1: "sweet",
@@ -54,26 +53,10 @@ def load_run_payload(run_dir: str) -> dict:
         return json.load(f)
 
 
-def get_bert_embeds_single(smiles: str):
-    tokenizer = BertTokenizer.from_pretrained(BERT_MODEL_NAME)
-    model = BertModel.from_pretrained(BERT_MODEL_NAME).to(DEVICE)
-    model.eval()
-    with torch.no_grad():
-        inputs = tokenizer(
-            smiles,
-            padding="max_length",
-            truncation=True,
-            max_length=MAX_LEN,
-            return_tensors="pt",
-        ).to(DEVICE)
-        output = model(**inputs)
-        embed = mean_pool_last_hidden_state(output.last_hidden_state, inputs["attention_mask"])
-        embed = embed.squeeze(0).cpu().numpy()
-    return embed
-
-
 def preprocess_new_data(input_csv: str, encoding: str):
     df = pd.read_csv(input_csv, encoding=encoding)
+    if df.empty:
+        raise ValueError("Prediction input CSV contains no rows.")
     required_cols = ["ID", "Name", "SMILES"]
     missing = [col for col in required_cols if col not in df.columns]
     if missing:
@@ -92,7 +75,7 @@ def preprocess_new_data(input_csv: str, encoding: str):
 
     df = df.copy().reset_index(drop=True)
     df["SMILES"] = df["SMILES"].astype(str).str.strip()
-    bert_embeds = [get_bert_embeds_single(smiles) for smiles in df["SMILES"]]
+    bert_embeds, _ = encode_smiles_bert(df["SMILES"].tolist(), batch_size=32, device=DEVICE)
 
     data_list = []
     valid_indices = []
@@ -103,8 +86,8 @@ def preprocess_new_data(input_csv: str, encoding: str):
             x=x,
             edge_index=edge_index,
             edge_attr=edge_attr,
-            mixfp=torch.tensor(get_mix_fingerprint(smiles), dtype=torch.float32),
-            bert=torch.tensor(bert_embeds[idx], dtype=torch.float32),
+            mixfp=torch.tensor(get_mix_fingerprint(smiles), dtype=torch.float32).reshape(1, -1),
+            bert=torch.tensor(bert_embeds[idx], dtype=torch.float32).reshape(1, -1),
             id=row["ID"],
             name=row["Name"],
         )
@@ -117,14 +100,29 @@ def preprocess_new_data(input_csv: str, encoding: str):
 def load_model(run_dir: str, payload: dict):
     config = payload["config"]
     checkpoints = payload["checkpoints"]
-    model_path = checkpoints["best_classify_model"]
+    recorded_path = checkpoints["best_classify_model"]
+    candidates = [
+        os.path.join(run_dir, recorded_path) if not os.path.isabs(recorded_path) else recorded_path,
+        os.path.join(run_dir, "checkpoints", "best_classify_model.pth"),
+    ]
+    model_path = next((path for path in candidates if os.path.exists(path)), None)
+    if model_path is None:
+        raise FileNotFoundError(f"No checkpoint found. Checked: {candidates}")
+    expected_hash = checkpoints.get("sha256")
+    if expected_hash:
+        digest = hashlib.sha256()
+        with open(model_path, "rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != expected_hash:
+            raise ValueError("Checkpoint SHA256 does not match result.json; refusing inference.")
     model = TasteBaselineModel(
         num_graph_features=NODE_FEATURE_DIM,
         edge_attr_dim=EDGE_FEATURE_DIM,
         graph_aux_hidden_dim=128,
         num_classes=config["num_classes"],
     ).to(DEVICE)
-    model.load_state_dict(torch.load(model_path, map_location=DEVICE))
+    model.load_state_dict(torch.load(model_path, map_location=DEVICE, weights_only=True))
     model.eval()
     return model
 
@@ -134,7 +132,9 @@ def load_temperature(payload: dict) -> float:
 
 
 def predict(run_dir: str, input_csv: str, encoding: str, output_csv: str, confidence_threshold: float):
-    ensure_dirs()
+    setup_seed(42)
+    if not 0.0 <= confidence_threshold <= 1.0:
+        raise ValueError("confidence_threshold must be in [0, 1].")
     payload = load_run_payload(run_dir)
     model = load_model(run_dir, payload)
     temperature = load_temperature(payload)
@@ -153,15 +153,21 @@ def predict(run_dir: str, input_csv: str, encoding: str, output_csv: str, confid
     conf = probs.max(axis=1)
     margin = conf_margin_from_logits(logits_ts)
 
-    df_valid["pred_label_id"] = pred
-    df_valid["pred_label"] = [LABEL_MAP[idx] for idx in pred]
+    if probs.shape[1] != len(LABEL_MAP):
+        raise ValueError(f"This prediction CLI supports the released six-class label map; model has {probs.shape[1]} classes.")
+    df_valid["pred_class_index"] = pred
+    df_valid["pred_label_id"] = pred + 1
+    df_valid["pred_label"] = [LABEL_MAP[int(idx)] for idx in pred]
     df_valid["pred_confidence"] = conf
     df_valid["pred_margin"] = margin
     df_valid["high_confidence"] = conf >= confidence_threshold
+    for class_index, class_name in LABEL_MAP.items():
+        df_valid[f"prob_{class_name}"] = probs[:, class_index]
 
     if not output_csv:
         output_csv = os.path.join(RESULTS_DIR, "predictions", "baseline_predictions.csv")
-    os.makedirs(os.path.dirname(output_csv), exist_ok=True)
+    output_parent = os.path.dirname(os.path.abspath(output_csv))
+    os.makedirs(output_parent, exist_ok=True)
     df_valid.to_csv(output_csv, index=False, encoding="utf-8-sig")
     print(f"[DONE] Predictions saved to: {output_csv}")
     return df_valid

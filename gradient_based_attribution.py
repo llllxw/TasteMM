@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import argparse
 import glob
+import hashlib
 import json
 import os
 import re
 from typing import Dict, List
+
+os.environ.setdefault("USE_TF", "0")
 
 import numpy as np
 import pandas as pd
@@ -13,7 +16,7 @@ import torch
 from rdkit import Chem
 from rdkit.Chem.Draw import rdMolDraw2D
 
-from model import MBNet_Contrastive
+from model import TasteBaselineModel
 from tools import CONTRAST_DIM, EMBED_DIM, GAT_DIM, PROCESSED_DIR
 
 
@@ -34,7 +37,10 @@ def get_args():
     )
     parser.add_argument("--input_csv", type=str, required=True, help="Source CSV containing ID, Name, SMILES, Label.")
     parser.add_argument("--output_dir", type=str, required=True, help="Directory to save explanations.")
-    parser.add_argument("--split", type=str, default="test", choices=["train", "val", "test"])
+    parser.add_argument(
+        "--split", type=str, default="test", choices=["test"],
+        help="Only test is supported because calibrated test artifacts are exported by train.py.",
+    )
     parser.add_argument(
         "--samples_per_class",
         type=int,
@@ -93,6 +99,12 @@ def find_fold_dirs(run_root: str) -> List[str]:
             fold_dirs.append(path)
     if not fold_dirs:
         raise FileNotFoundError(f"No fold result directories found under: {run_root}")
+    folds = [int(load_run_payload(path)["config"]["fold"]) for path in fold_dirs]
+    if sorted(folds) != list(range(5)):
+        raise RuntimeError(
+            f"Expected exactly one completed run for each fold 0..4 under {run_root}; found folds {folds}. "
+            "Point --run_root to a single experiment configuration."
+        )
     return fold_dirs
 
 
@@ -107,6 +119,7 @@ def load_source_table(path: str, encoding: str) -> pd.DataFrame:
     if not required.issubset(df.columns):
         raise ValueError(f"Input CSV must contain columns {sorted(required)}; got {df.columns.tolist()}")
     df = df.copy()
+    df["row_index"] = np.arange(len(df), dtype=int)
     df["ID_str"] = df["ID"].astype(str)
     df["class_name"] = df["Label"].astype(int).map(lambda x: CLASS_NAMES[x - 1])
     return df
@@ -121,33 +134,34 @@ def infer_graph_dims(data_list) -> tuple[int, int]:
     return graph_num_features, graph_edge_attr_dim
 
 
-def build_model_from_payload(payload: Dict, data_list, device: torch.device) -> MBNet_Contrastive:
+def build_model_from_payload(payload: Dict, data_list, device: torch.device, run_dir: str) -> TasteBaselineModel:
     cfg = payload["config"]
     graph_num_features, graph_edge_attr_dim = infer_graph_dims(data_list)
-    model = MBNet_Contrastive(
+    model = TasteBaselineModel(
         embed_dim=EMBED_DIM,
-        num_features_xd=graph_num_features,
+        num_graph_features=graph_num_features,
         gat_dim=GAT_DIM,
         contrast_dim=CONTRAST_DIM,
         num_classes=int(cfg.get("num_classes", 6)),
-        use_graph=bool(cfg.get("use_graph", True)),
-        use_mixfp=bool(cfg.get("use_mixfp", True)),
-        use_bert=bool(cfg.get("use_bert", True)),
-        use_branch_gates=bool(cfg.get("use_branch_gates", True)),
         edge_attr_dim=graph_edge_attr_dim,
-        gnn_type=str(cfg.get("gnn_type", "gatv2")),
-        cls_head_type=str(cfg.get("cls_head_type", "linear")),
-        cls_hidden_dim=int(cfg.get("cls_hidden_dim", 128)),
-        graph_gate_init=float(cfg.get("graph_gate_init", 0.35)),
-        mixfp_gate_init=float(cfg.get("mixfp_gate_init", 0.85)),
-        bert_gate_init=float(cfg.get("bert_gate_init", 0.75)),
-        use_graph_aux_head=bool(cfg.get("use_graph_aux_head", False)),
         graph_aux_hidden_dim=int(cfg.get("graph_aux_hidden_dim", 128)),
-        fuse_graph_logits_residual=bool(cfg.get("fuse_graph_logits_residual", False)),
-        graph_logit_residual_weight=float(cfg.get("graph_logit_residual_weight", 0.0)),
     ).to(device)
-    ckpt_path = payload["checkpoints"]["best_classify_model"]
-    model.load_state_dict(torch.load(ckpt_path, map_location=device))
+    recorded = payload["checkpoints"]["best_classify_model"]
+    ckpt_path = recorded if os.path.isabs(recorded) else os.path.join(run_dir, recorded)
+    fallback = os.path.join(run_dir, "checkpoints", "best_classify_model.pth")
+    if not os.path.exists(ckpt_path) and os.path.exists(fallback):
+        ckpt_path = fallback
+    if not os.path.exists(ckpt_path):
+        raise FileNotFoundError(f"Checkpoint not found: {ckpt_path}")
+    expected_hash = payload["checkpoints"].get("sha256")
+    if expected_hash:
+        digest = hashlib.sha256()
+        with open(ckpt_path, "rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != expected_hash:
+            raise ValueError("Checkpoint SHA256 does not match result.json.")
+    model.load_state_dict(torch.load(ckpt_path, map_location=device, weights_only=True))
     model.eval()
     return model
 
@@ -181,9 +195,13 @@ def build_sample_table(run_root: str, processed_dir: str, split: str) -> pd.Data
             raise ValueError(f"Mismatch between processed data and predictions in fold {fold}.")
 
         for idx, data in enumerate(data_list):
+            if not hasattr(data, "row_index"):
+                raise RuntimeError("Processed data lacks row_index; regenerate it with data_process.py.")
             row = {
                 "fold": fold,
+                "run_dir": fold_dir,
                 "sample_index_within_fold": idx,
+                "row_index": int(data.row_index.reshape(-1)[0].item()),
                 "id": getattr(data, "id", None),
                 "id_str": str(getattr(data, "id", None)),
                 "name": getattr(data, "name", None),
@@ -365,7 +383,7 @@ def explain_selected_samples(
 ):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     fold_payload_cache: Dict[int, Dict] = {}
-    fold_model_cache: Dict[int, MBNet_Contrastive] = {}
+    fold_model_cache: Dict[int, TasteBaselineModel] = {}
     fold_data_cache: Dict[int, list] = {}
 
     selected_rows = []
@@ -374,13 +392,12 @@ def explain_selected_samples(
     for row in selected_df.itertuples(index=False):
         fold = int(row.fold)
         if fold not in fold_payload_cache:
-            candidates = sorted(glob.glob(os.path.join(run_root, f"fold{fold}_*")))
-            if not candidates:
-                raise FileNotFoundError(f"No fold directory found for fold {fold} under {run_root}")
-            fold_dir = candidates[0]
+            fold_dir = str(row.run_dir)
+            if not os.path.isdir(fold_dir):
+                raise FileNotFoundError(f"Run directory no longer exists: {fold_dir}")
             payload = load_run_payload(fold_dir)
             data_list = load_split_data(processed_dir, fold, split)
-            model = build_model_from_payload(payload, data_list, device)
+            model = build_model_from_payload(payload, data_list, device, fold_dir)
             fold_payload_cache[fold] = payload
             fold_model_cache[fold] = model
             fold_data_cache[fold] = data_list
@@ -389,9 +406,6 @@ def explain_selected_samples(
         sample = prepare_single_graph(data_obj, device)
         model = fold_model_cache[fold]
 
-        with torch.no_grad():
-            probs = torch.softmax(model(sample, mode="classify"), dim=1).detach().cpu().numpy().reshape(-1)
-
         target_idx = int(row.pred_label if target_mode == "pred" else row.true_label)
         if method == "grad_x_input":
             score_payload = compute_grad_x_input(model, sample, target_idx=target_idx)
@@ -399,9 +413,9 @@ def explain_selected_samples(
             score_payload = compute_integrated_gradients(model, sample, target_idx=target_idx, steps=ig_steps)
         atom_scores = score_payload["signed_norm"] if score_mode == "signed" else score_payload["abs_norm"]
 
-        source_match = source_df[source_df["ID_str"] == str(row.id_str)]
+        source_match = source_df[source_df["row_index"] == int(row.row_index)]
         if source_match.empty:
-            raise ValueError(f"Cannot find source SMILES for ID={row.id_str}")
+            raise ValueError(f"Cannot find source SMILES for row_index={row.row_index}")
         source_info = source_match.iloc[0]
         smiles = str(source_info["SMILES"])
         mol = Chem.MolFromSmiles(smiles)
@@ -413,6 +427,7 @@ def explain_selected_samples(
         selected_rows.append(
             {
                 "fold": fold,
+                "row_index": int(row.row_index),
                 "id": row.id,
                 "name": row.name,
                 "smiles": smiles,
@@ -427,8 +442,8 @@ def explain_selected_samples(
                 "conf_margin": row.conf_margin,
                 "method": method,
                 "score_mode": score_mode,
-                "attention_png": os.path.join(output_dir, f"{stem}.png"),
-                "attention_svg": os.path.join(output_dir, f"{stem}.svg"),
+                "attribution_png": os.path.join(output_dir, f"{stem}.png"),
+                "attribution_svg": os.path.join(output_dir, f"{stem}.svg"),
             }
         )
 
@@ -436,6 +451,7 @@ def explain_selected_samples(
             atom_rows.append(
                 {
                     "fold": fold,
+                    "row_index": int(row.row_index),
                     "id": row.id,
                     "name": row.name,
                     "true_label_name": row.true_label_name,
@@ -456,6 +472,8 @@ def explain_selected_samples(
 
 def main():
     args = get_args()
+    if args.samples_per_class < 1 or args.ig_steps < 1 or args.image_size < 100:
+        raise ValueError("samples_per_class and ig_steps must be positive; image_size must be at least 100.")
     os.makedirs(args.output_dir, exist_ok=True)
 
     source_df = load_source_table(args.input_csv, args.encoding)
