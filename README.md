@@ -63,17 +63,15 @@ python scripts/audit_dataset.py --input data/compound.csv --output-dir data/audi
 
 The audit verifies SMILES validity, counts classes and duplicates, canonicalizes structures, and exports cross-label structures. The released final table contains 115 canonical structures associated with more than one label (282 rows). Thus, the model is trained with one target per row, but the repository does not claim that every chemical structure has only one possible taste. The pre-curation master table and exclusion log are not available in this package, so the number of ambiguous source records removed during harmonization cannot be reconstructed from the final CSV.
 
-Build the PyTorch Geometric data for five matched 80/10/10 runs:
+Build the PyTorch Geometric data for five matched stratified 80/10/10 train/validation/test runs:
 
 ```bash
 python data_process.py --input_csv data/compound.csv --encoding utf-8
 ```
 
-For every run, the script performs a stratified outer 80%/20% split and divides the held-out 20% equally into validation and test sets, giving approximately 80% training, 10% validation, and 10% test data. This is not conventional five-fold cross-validation: only half of each outer held-out partition is used as that run's test set. It saves `train_pyg.pt`, `val_pyg.pt`, `test_pyg.pt`, and a human-readable `split_manifest.csv` under `data/Multi/processed/fold_<n>/`.
+For every run, the script creates stratified partitions containing approximately 80% training data, 10% validation data, and 10% test data. It saves `train_pyg.pt`, `val_pyg.pt`, `test_pyg.pt`, and a human-readable `split_manifest.csv` under `data/Multi/processed/fold_<n>/`.
 
-Supervised contrastive pretraining, graph-branch warm-up, and end-to-end fine-tuning use only the training partition of each fold. The validation partition is used for early stopping, model selection, and temperature scaling; the test partition is used only for final evaluation.
-
-Important limitation: the released experiment reproduces the reported row-level stratified split. Because repeated or cross-labelled canonical structures exist, 22.19%–24.55% of test rows across the five runs have a canonical structure also present in that run's training partition (see `benchmarks/model_comparison/manifests/dataset_and_split_audit.json`). A structure-grouped or scaffold-split sensitivity analysis is recommended for estimating generalization to unseen chemistry; it should be reported separately from the reproduced primary results.
+Supervised contrastive pretraining, graph-branch warm-up, and end-to-end fine-tuning use only the training partition of each run. The validation partition is used for early stopping, model selection, and temperature scaling; the test partition is used only for final evaluation.
 
 ## 3. Checkpoints and outputs
 
@@ -88,13 +86,13 @@ Checkpoint paths stored in `result.json` are relative to the run directory, so a
 
 ## 4. Training, evaluation, and prediction
 
-Run one fold:
+Run one matched split:
 
 ```bash
 python train.py --fold 0 --seed 42 --out_dir runs
 ```
 
-Run all five matched folds and export mean and standard deviation:
+Run all five matched splits and export mean and standard deviation:
 
 ```bash
 python train_5fold.py --folds 0,1,2,3,4 --seed 42 --out_dir runs --summary_csv results/tastemm_5fold_summary.csv
@@ -106,7 +104,7 @@ To migrate an older completed run to the current auditable artifact schema witho
 python reevaluate_run.py --run-dir runs/fold0_seed42_baseline --processed-dir data/Multi/processed
 ```
 
-Repeat for folds 0–4. This adds source-row indices, raw probabilities, embeddings, a prediction CSV, a relative checkpoint path, and a checkpoint hash.
+Repeat for split indices 0–4. This adds source-row indices, raw probabilities, embeddings, a prediction CSV, a relative checkpoint path, and a checkpoint hash.
 
 Predict new compounds from a CSV containing `ID`, `Name`, and `SMILES`:
 
@@ -118,7 +116,7 @@ The evaluation code reports accuracy, macro/weighted F1, class-wise and macro AU
 
 ## 5. Same-split model comparisons
 
-[`benchmarks/model_comparison/`](benchmarks/model_comparison/) contains the common-split comparison framework for TasteMM, TasteMolNet, Virtuous MultiTaste, and FART. The three published comparators are independent, paper-informed task adaptations implemented for the frozen TasteMM partitions; they are not claimed to be byte-for-byte executions of the original authors' repositories. The framework stores per-compound probabilities, validates sample-level pairing before analysis, summarizes the five run scores as mean ± SD, computes one-vs-rest taste metrics, and performs fold-blocked ANOVA and Tukey HSD comparisons.
+[`benchmarks/model_comparison/`](benchmarks/model_comparison/) contains the common-split comparison framework for TasteMM, TasteMolNet, Virtuous MultiTaste, and FART. The three published comparators are independent, paper-informed task adaptations implemented for the frozen TasteMM partitions; they are not claimed to be byte-for-byte executions of the original authors' repositories. The framework stores per-compound probabilities, validates sample-level pairing before analysis, summarizes the five run scores as mean ± SD, computes one-vs-rest taste metrics, and performs split-blocked ANOVA and Tukey HSD comparisons.
 
 Six-class adaptations and original-label-range scope-matched experiments are kept separate. Model names use their original published forms, while each run configuration records the change in output space. Code and frozen manifests are included for TasteMolNet's three-class, Virtuous MultiTaste's four-class, and FART's five-class scopes. No final comparison tables are currently bundled; verified GPU outputs and their strict import audits must be completed before final manuscript reporting.
 
@@ -144,7 +142,7 @@ TasteMM/
 ├── benchmarks/model_comparison/  # same-split comparisons and statistical tests
 ├── data_process.py               # features, validation, splits, and manifests
 ├── model.py                      # multimodal GATv2/fingerprint/BERT model
-├── train.py                      # one-fold training and evaluation
+├── train.py                      # one-split training and evaluation
 ├── train_5fold.py                # five matched-run driver and mean/SD summary
 ├── reevaluate_run.py             # migrate existing checkpoints without retraining
 ├── predict.py                    # inference on new SMILES

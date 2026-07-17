@@ -1,6 +1,6 @@
 # Same-split model-comparison package
 
-This directory implements the reviewer-facing comparison protocol on the released 12,706-row dataset. Every model receives the same fold-specific training, validation, and test rows. The split ID is retained as the pairing/blocking unit for statistical analysis.
+This directory implements the reviewer-facing comparison protocol on the released 12,706-row dataset. Every model receives the same split-specific training, validation, and test rows. The split ID is retained as the pairing/blocking unit for statistical analysis.
 
 ## Included experiments
 
@@ -10,11 +10,11 @@ This directory implements the reviewer-facing comparison protocol on the release
 - `prepare_scope_matched.py`: frozen manifests for the three-, four-, and five-class scope-matched tasks;
 - `run_tastemolnet_scope3.py`, `run_virtuous_multitaste_scope4.py`, and `run_fart_scope5.py`: comparator-side scope-matched runs;
 - `import_scope_tastemm_results.py` and `analyze_scope_matched.py`: strict TasteMM import and two-model paired inference for each scope;
-- `analyze_benchmark.py`: mean/SD aggregation, one-vs-rest taste metrics, fold-blocked ANOVA, paired effects, and Tukey HSD comparisons.
+- `analyze_benchmark.py`: mean/SD aggregation, one-vs-rest taste metrics, split-blocked ANOVA, paired effects, and Tukey HSD comparisons.
 
 Model names in outputs use their original published names. Each configuration file separately records that the method was retrained with six outputs for the common benchmark. Six-class results and original-label-range scope-matched results must be reported in separate tables.
 
-These scripts are paper-informed reimplementations for a new common task, not claims that the original authors' complete training repositories were executed unchanged. Important deviations are explicit: the output heads are changed to six classes; Virtuous MultiTaste uses the reported 15-descriptor family with fold-local preprocessing and random oversampling; and FART aggregates randomized-SMILES predictions by mean probability. Cite the original method papers and repositories in the manuscript, and describe these implementations as task adaptations.
+These scripts are paper-informed reimplementations for a new common task, not claims that the original authors' complete training repositories were executed unchanged. Important deviations are explicit: the output heads are changed to six classes; Virtuous MultiTaste uses the reported 15-descriptor family with split-local preprocessing and random oversampling; and FART aggregates randomized-SMILES predictions by mean probability. Cite the original method papers and repositories in the manuscript, and describe these implementations as task adaptations.
 
 FART uses the pinned Hugging Face checkpoint `seyonec/SMILES_tokenized_PubChem_shard00_160k` at revision `f0854db6cbaad4655ce3bb0c073b9ba0199f4a7d`. Override `--revision` only when intentionally running a separately documented sensitivity experiment.
 
@@ -51,7 +51,7 @@ python benchmarks/model_comparison/import_tastemm_results.py --run-root /path/to
 python benchmarks/model_comparison/analyze_benchmark.py
 ```
 
-If the TasteMM runs predate `test_row_indices.npy`, first run `reevaluate_run.py` once per fold using the matching processed directory. This reuses the checkpoint and does not retrain the model.
+If the TasteMM runs predate `test_row_indices.npy`, first run `reevaluate_run.py` once per split using the matching processed directory. This reuses the checkpoint and does not retrain the model.
 
 Reproduce the three scope-matched comparisons without overwriting the six-class processed data. Each TasteMM task uses its own processed and run directory:
 
@@ -79,6 +79,6 @@ python benchmarks/model_comparison/analyze_scope_matched.py --task scope5
 
 The primary inferential analysis treats the five matched split scores as blocked observations. It reports the overall model effect, Tukey-adjusted pairwise comparisons, paired mean differences with confidence intervals, and one-vs-rest analyses. With only five splits, statistical power is limited; effect sizes and confidence intervals should accompany adjusted p-values. Salty-taste inference is exploratory because the full dataset contains only 28 salty rows.
 
-No final comparison tables are bundled at present. The previously generated local tables were removed because they combined available CPU baselines with existing TasteMM outputs but did not contain a complete, verified set of GPU-server results. Add result tables only after every model in a comparison has predictions for the same five frozen test folds.
+No final comparison tables are bundled at present. The previously generated local tables were removed because they combined available CPU baselines with existing TasteMM outputs but did not contain a complete, verified set of GPU-server results. Add result tables only after every model in a comparison has predictions for the same five frozen test splits.
 
 The code covers all planned unified and scope-matched experiment definitions. Final tables still require verified GPU outputs for FART and the corresponding TasteMM scope runs. Outputs produced from older datasets or independent train/test splits must not be mixed with this matched-run analysis.

@@ -51,7 +51,7 @@ def main() -> None:
 
     metadata = pd.concat(metadata_parts, ignore_index=True)
     if metadata["row_index"].duplicated().any():
-        raise ValueError("A source row appears in more than one exported test fold.")
+        raise ValueError("A source row appears in more than one exported test split.")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     metadata.to_csv(args.output_dir / "test_embedding_metadata.csv", index=False, encoding="utf-8-sig")
     np.savez_compressed(
