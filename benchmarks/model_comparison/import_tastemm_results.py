@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 def main() -> None:
     parser = argparse.ArgumentParser(description="Import existing TasteMM predictions into the common benchmark schema.")
     parser.add_argument("--manifest", type=Path, default=HERE / "manifests" / "six_class_split_manifest.csv")
-    parser.add_argument("--run-root", type=Path, required=True, help="TasteMM five-fold run directory.")
+    parser.add_argument("--run-root", type=Path, required=True, help="TasteMM five-run directory.")
     parser.add_argument("--output", type=Path, default=HERE / "outputs" / "tastemm")
     args = parser.parse_args()
 

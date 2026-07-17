@@ -108,7 +108,7 @@ def canonical_structure_overlap(manifest: pd.DataFrame) -> dict[str, dict[str, f
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Freeze the exact TasteMM five-fold benchmark splits.")
+    parser = argparse.ArgumentParser(description="Freeze the exact five matched TasteMM benchmark splits.")
     parser.add_argument("--data", type=Path, default=DEFAULT_DATA)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
@@ -143,7 +143,7 @@ def main() -> None:
         "duplicate_nonmissing_id_rows_beyond_first": int(df["ID"].dropna().duplicated().sum()),
         "duplicate_smiles_rows_beyond_first": int(len(df) - df["SMILES"].nunique(dropna=False)),
         "class_counts": {LABEL_NAMES[int(k)]: int(v) for k, v in class_counts.items()},
-        "split_method": "Exact reproduction of TasteMM row-level StratifiedKFold(5, shuffle=True, random_state=42), then held-out half split",
+        "split_method": "Five matched stratified 80/10/10 row-level train/validation/test splits with random_state=42",
         "test_rows_per_fold": {
             str(k): int(v)
             for k, v in test_manifest.groupby("fold").size().to_dict().items()

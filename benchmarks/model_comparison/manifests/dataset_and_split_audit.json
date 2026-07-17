@@ -16,7 +16,7 @@
     "sour": 1700,
     "tasteless": 5010
   },
-  "split_method": "Exact reproduction of TasteMM row-level StratifiedKFold(5, shuffle=True, random_state=42), then held-out half split",
+  "split_method": "Five matched stratified 80/10/10 row-level train/validation/test splits with random_state=42",
   "test_rows_per_fold": {
     "0": 1271,
     "1": 1271,

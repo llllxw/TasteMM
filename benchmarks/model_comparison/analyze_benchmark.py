@@ -143,7 +143,7 @@ def blocked_anova_and_tukey(metrics: pd.DataFrame, output: Path) -> None:
         for _, row in table.iterrows():
             anova_rows.append({"metric": metric_name, **row.to_dict()})
 
-        # Tukey HSD for a randomized complete block design: folds are blocks,
+        # Tukey HSD for a randomized complete block design: matched splits are blocks,
         # models are treatments, and the ANOVA residual supplies the error term.
         model_means = data.groupby("model")["value"].mean()
         n_blocks = data["split_id"].nunique()
@@ -315,8 +315,8 @@ def main() -> None:
             for model, count in metrics[metrics["metric"] == "macro_auroc"].groupby("model")["fold"].nunique().items()
         },
         "primary_metrics": PRIMARY_METRICS,
-        "statistical_unit": "fold score; identical split_id is the pairing/blocking unit",
-        "tukey_note": "Tukey HSD uses the fold-blocked ANOVA residual (randomized complete block design); paired effect estimates are also reported.",
+        "statistical_unit": "matched split score; identical split_id is the pairing/blocking unit",
+        "tukey_note": "Tukey HSD uses the split-blocked ANOVA residual (randomized complete block design); paired effect estimates are also reported.",
         "salty_note": "Salty per-taste inference is exploratory because only 28 samples exist in the full dataset.",
     }
     with open(args.analysis / "analysis_audit.json", "w", encoding="utf-8") as handle:

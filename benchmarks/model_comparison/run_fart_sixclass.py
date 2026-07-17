@@ -172,7 +172,7 @@ def main() -> None:
         return
     if not torch.cuda.is_available():
         raise RuntimeError(
-            "No CUDA GPU detected. Full five-fold FART fine-tuning is intentionally not started on CPU. "
+            "No CUDA GPU detected. Full five-run FART fine-tuning is intentionally not started on CPU. "
             "Use --smoke-test locally or run this command on a GPU server."
         )
 
