@@ -8,7 +8,7 @@ This repository contains the released benchmark CSV, preprocessing and split-gen
 
 ## 1. Environment
 
-The intended GPU environment is pinned in `environment.yml` and `requirements.txt`. Python 3.10 is used because several locked package releases are not compatible with Python 3.8.
+The intended GPU environment is pinned in `environment.yml` and `requirements.txt`.
 
 ### Conda installation (recommended)
 
@@ -61,7 +61,7 @@ Audit the released table:
 python scripts/audit_dataset.py --input data/compound.csv --output-dir data/audit
 ```
 
-The audit verifies SMILES validity, counts classes and duplicates, canonicalizes structures, and exports cross-label structures. The released final table contains 115 canonical structures associated with more than one label (282 rows). Thus, the model is trained with one target per row, but the repository does not claim that every chemical structure has only one possible taste. The pre-curation master table and exclusion log are not available in this package, so the number of ambiguous source records removed during harmonization cannot be reconstructed from the final CSV.
+The audit verifies SMILES validity, counts classes and duplicates, canonicalizes structures, and exports cross-label structures. 
 
 Build the PyTorch Geometric data for five matched stratified 80/10/10 train/validation/test runs:
 
