@@ -153,4 +153,4 @@ TasteMM/
 
 ## 8. Citation
 
-If you use the dataset, model, or benchmark code, please cite the TasteMM manuscript and the original databases listed in `DATA_SOURCES.md`. The final journal citation and DOI should be added here after publication.
+If you use the dataset, model, or benchmark code, please cite the TasteMM manuscript and the original databases listed in `DATA_SOURCES.md`. 
