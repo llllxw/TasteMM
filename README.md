@@ -116,9 +116,9 @@ The evaluation code reports accuracy, macro/weighted F1, class-wise and macro AU
 
 ## 5. Same-split model comparisons
 
-[`benchmarks/model_comparison/`](benchmarks/model_comparison/) contains the common-split comparison framework for TasteMM, TasteMolNet, Virtuous MultiTaste, and FART. The three published comparators are independent, paper-informed task adaptations implemented for the frozen TasteMM partitions; they are not claimed to be byte-for-byte executions of the original authors' repositories. The framework stores per-compound probabilities, validates sample-level pairing before analysis, summarizes the five run scores as mean ± SD, computes one-vs-rest taste metrics, and performs split-blocked ANOVA and Tukey HSD comparisons.
+[`benchmarks/model_comparison/`](benchmarks/model_comparison/) contains the common-split comparison framework for TasteMM, TasteMolNet, Virtuous MultiTaste, and FART. The three published comparators are independent, paper-informed task adaptations implemented for the frozen TasteMM partitions. The framework stores per-compound probabilities, validates sample-level pairing before analysis, summarizes the five run scores as mean ± SD, computes one-vs-rest taste metrics, and performs split-blocked ANOVA and Tukey HSD comparisons.
 
-Six-class adaptations and original-label-range scope-matched experiments are kept separate. Model names use their original published forms, while each run configuration records the change in output space. Code and frozen manifests are included for TasteMolNet's three-class, Virtuous MultiTaste's four-class, and FART's five-class scopes. No final comparison tables are currently bundled; verified GPU outputs and their strict import audits must be completed before final manuscript reporting.
+Six-class adaptations and original-label-range scope-matched experiments are kept separate. Model names use their original published forms, while each run configuration records the change in output space. Code and frozen manifests are included for TasteMolNet's three-class, Virtuous MultiTaste's four-class, and FART's five-class scopes. 
 
 ## 6. Interpretability and visualization
 
