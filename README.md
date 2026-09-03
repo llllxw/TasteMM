@@ -4,7 +4,7 @@ TasteMM is an interpretable multimodal framework for six-class molecular taste p
 
 The sequence encoder is pinned to `google-bert/bert-base-uncased` revision `86b5e0934494bd15c9632b12f734a8a67f723594`; cache metadata records the revision, input-order hash, pooling rule, maximum length, and array shape.
 
-This repository contains the released benchmark CSV, preprocessing and split-generation code, model training and inference code, calibration and selective-prediction metrics, interpretation utilities, a same-split model-comparison package, and a CPU-friendly installation test.
+This repository contains the released benchmark CSV, preprocessing and split-generation code, model training and inference code, calibration and selective-prediction metrics, interpretation utilities, matched molecular pair (MMP) analysis, a same-split model-comparison package, and a CPU-friendly installation test.
 
 ## 1. Environment
 
@@ -132,7 +132,39 @@ python plot_gradient_based_attribution.py --help
 
 `gradient_based_attribution.py` supports Integrated Gradients and gradient-times-input atom attribution. `plot_gradient_based_attribution.py` renders the exported atom table without relying on an unpublished helper module.
 
-## 7. Repository layout
+## 7. Matched molecular pair analysis
+
+[`mmp_analysis.py`](mmp_analysis.py) reproduces the matched molecular pair analysis used to connect local structural edits with changes in TasteMM predictions and atom-level attributions. It identifies taste-switching MMPs among compounds held out from model training, matches each pair to a same-taste non-switching control, and computes contrastive Integrated Gradients with the corresponding trained split model. MMP construction uses Morgan fingerprints (radius 2, 2,048 bits), a minimum Tanimoto similarity of 0.60, a maximum heavy-atom-count difference of five, and a maximum of five changed heavy atoms per molecule after maximum-common-substructure matching.
+
+Stage A requires the processed PyTorch Geometric data and the five completed TasteMM run directories. Each run directory must contain `result.json` and its referenced classification checkpoint. A GPU is recommended for the attribution calculations, although `--device cpu` is supported.
+
+```bash
+python mmp_analysis.py --stage A \
+  --input_csv data/compound.csv \
+  --split_manifest benchmarks/model_comparison/manifests/six_class_split_manifest.csv \
+  --run_root runs \
+  --processed_dir data/Multi/processed \
+  --output_dir results/mmp
+```
+
+Stage B uses the Stage A tables to calculate paired bootstrap confidence intervals, paired permutation tests, paired effect sizes, and Spearman attribution–prediction consistency statistics, and then creates the analysis panels. It does not require model checkpoints or retraining.
+
+```bash
+python mmp_analysis.py --stage B --output_dir results/mmp
+```
+
+Both stages can be run consecutively with `--stage AB` and the same path arguments used for Stage A. The principal auditable outputs are:
+
+- `stage_A_mmp_pairs.csv`: taste-switching MMPs and their matched non-switching controls;
+- `stage_A_contrastive_ig_atoms.csv` and `stage_A_ig_task_summary.csv`: atom-level and molecule-level contrastive Integrated Gradients;
+- `stage_A_panel_representatives.csv`: identifiers for the prespecified representative examples;
+- `stage_B_validation_statistics.csv`: paired group comparison, bootstrap interval, permutation test, and effect size;
+- `stage_B_attribution_prediction_consistency.csv` and `stage_B_consistency_statistics.csv`: attribution–prediction consistency data and statistics;
+- `PanelA`, `PanelB`, `PanelC`, and `Fig_structural_optimization_ABC` in PNG and SVG formats.
+
+The random seed, MMP thresholds, 32 Integrated Gradients steps, 5,000 bootstrap resamples, and 20,000 permutation repetitions are defined at the top of the script. Stage A caches the pre-attribution MMP table as `stage_A_mmp_pairs_pre_ig.csv`; pass `--rebuild_mmp` after changing the input data or MMP criteria.
+
+## 8. Repository layout
 
 ```text
 TasteMM/
@@ -148,9 +180,10 @@ TasteMM/
 ├── predict.py                    # inference on new SMILES
 ├── export_embedding_table.py     # auditable embedding-table export
 ├── calibration_metrics.py        # ECE, Brier, AURC, and EAURC
-└── gradient_based_attribution.py # atom-level explanations
+├── gradient_based_attribution.py # atom-level explanations
+└── mmp_analysis.py               # matched pairs, contrastive IG, statistics, and figures
 ```
 
-## 8. Citation
+## 9. Citation
 
 If you use the dataset, model, or benchmark code, please cite the TasteMM manuscript and the original databases listed in `DATA_SOURCES.md`. 
