@@ -6,6 +6,14 @@ The sequence encoder is pinned to `google-bert/bert-base-uncased` revision `86b5
 
 This repository contains the released benchmark CSV, preprocessing and split-generation code, model training and inference code, calibration and selective-prediction metrics, interpretation utilities, matched molecular pair (MMP) analysis, a same-split model-comparison package, and a CPU-friendly installation test.
 
+## Desktop application — Linux preview
+
+[Download TasteMM for Linux x86_64](https://github.com/llllxw/TasteMM/releases/download/desktop-v0.1.0-linux/TasteMM-Linux-x86_64.tar.gz) · [Release notes, checksum and desktop source](https://github.com/llllxw/TasteMM/releases/tag/desktop-v0.1.0-linux)
+
+Extract the complete archive and run `./TasteMM/TasteMM`. The download includes the CPU runtime and model resources; prediction requires no Python installation, GPU or network connection. Keep the extracted directory intact.
+
+The desktop supports single-SMILES prediction, batch CSV input, molecular structure display, six-class probabilities and CSV export. This preview uses the existing fold 0 checkpoint with validation-derived temperature calibration. Salty predictions remain exploratory because the development dataset contains only 28 salty records. Windows and macOS packages are not yet available.
+
 ## 1. Environment
 
 The intended GPU environment is pinned in `environment.yml` and `requirements.txt`.
