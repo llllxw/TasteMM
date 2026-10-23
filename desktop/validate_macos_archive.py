@@ -33,6 +33,8 @@ with tempfile.TemporaryDirectory(prefix='TasteMM-macOS-') as temp:
     subprocess.run(['codesign', '--verify', '--deep', '--strict', str(bundle)], check=True, timeout=120)
     with (bundle / 'Contents/Info.plist').open('rb') as stream:
         info = plistlib.load(stream)
+    assert info['CFBundleShortVersionString'] == '0.1.0', info
+    assert info['CFBundleVersion'] == '0.1.0', info
     environment = os.environ.copy()
     for key in ['PYTHONHOME', 'PYTHONPATH', 'VIRTUAL_ENV', 'CONDA_PREFIX', 'TCL_LIBRARY', 'TK_LIBRARY', 'DYLD_LIBRARY_PATH', 'DYLD_FRAMEWORK_PATH']:
         environment.pop(key, None)
@@ -70,6 +72,7 @@ with tempfile.TemporaryDirectory(prefix='TasteMM-macOS-') as temp:
                'empty_model_cache': True, 'network_denied_by_macos_sandbox': True,
                'code_signature_deep_strict_verified': True,
                'bundle_identifier': info.get('CFBundleIdentifier'),
+               'app_version': info['CFBundleShortVersionString'],
                'minimum_system_version_metadata': info.get('LSMinimumSystemVersion'),
                'signing': 'ad-hoc', 'notarized': False,
                'gatekeeper_downloaded_app_tested': False,

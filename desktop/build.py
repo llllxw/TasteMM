@@ -8,6 +8,7 @@ import shutil
 import re
 import subprocess
 import sys
+import plistlib
 
 root = Path(__file__).resolve().parent
 parser = argparse.ArgumentParser()
@@ -81,8 +82,17 @@ help_text = ('TasteMM Desktop\n\n'
 help_destination = distribution / 'Contents/Resources/HELP.txt' if sys.platform == 'darwin' else distribution / 'HELP.txt'
 help_destination.write_text(help_text, encoding='utf-8')
 if sys.platform == 'darwin':
+    info_path = distribution / 'Contents/Info.plist'
+    with info_path.open('rb') as stream:
+        info = plistlib.load(stream)
+    info.update(CFBundleShortVersionString='0.1.0', CFBundleVersion='0.1.0',
+                NSHumanReadableCopyright='Copyright (c) 2026 Xiaowei Liu',
+                LSApplicationCategoryType='public.app-category.education')
+    with info_path.open('wb') as stream:
+        plistlib.dump(info, stream)
     subprocess.run(['codesign', '--force', '--deep', '--sign', '-', str(distribution)], check=True)
 status = {'platform': platform.platform(), 'architecture': platform.machine(), 'python': sys.version,
+          'app_version': '0.1.0',
           'distribution': str(distribution), 'model_included': not args.without_model,
           'training_performed': False, 'validation': 'Run the frozen executable with --self-test before distribution.'}
 (root / 'dist/build_manifest.json').write_text(json.dumps(status, indent=2))
