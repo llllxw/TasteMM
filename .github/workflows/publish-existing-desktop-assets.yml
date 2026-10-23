@@ -1,0 +1,41 @@
+name: Transfer validated desktop archives to Release
+
+on:
+  push:
+    branches: [release/desktop-v0.1.0-20261023]
+    paths: [.github/workflows/publish-existing-desktop-assets.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  transfer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: llllxw/TasteMM
+    steps:
+      - name: Verify destination release
+        run: |
+          gh release view desktop-v0.1.0 --json isDraft,targetCommitish > release.json
+          python - <<'PY'
+          import json
+          data = json.load(open('release.json'))
+          assert data['isDraft'], 'Only upload to the prepared draft'
+          assert data['targetCommitish'] == '0a69a32691d49f9526b8792eb8aad03c55764e5f'
+          PY
+      - name: Retrieve original Linux archive
+        run: gh release download desktop-v0.1.0-linux --pattern TasteMM-Linux-x86_64.tar.gz --dir linux
+      - name: Retrieve validated macOS archive from original build
+        run: gh run download 39922409672 --name TasteMM-macOS-arm64-preview --dir macos
+      - name: Verify exact validated archive hashes
+        run: |
+          echo 'c54d0e8e77995ad5e2fe0af4d44d2864d59ecdc3b046c71d33ee49abfb6ff81d  linux/TasteMM-Linux-x86_64.tar.gz' | sha256sum --check --strict
+          echo '0702c21b748248e79b9876ec754857f0b0a7f74e2c2f80ea438d7abc91c3fd96  macos/TasteMM-macOS-arm64.zip' | sha256sum --check --strict
+      - name: Attach Linux archive to draft
+        run: gh release upload desktop-v0.1.0 linux/TasteMM-Linux-x86_64.tar.gz
+      - name: Attach macOS archive to draft
+        run: gh release upload desktop-v0.1.0 macos/TasteMM-macOS-arm64.zip
