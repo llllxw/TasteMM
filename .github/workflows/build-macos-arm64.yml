@@ -1,0 +1,73 @@
+name: Build TasteMM macOS Apple Silicon
+on:
+  push:
+    branches: [build/macos-arm64-preview-20261023]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: desktop
+        shell: bash
+    env:
+      HF_HUB_OFFLINE: '1'
+      TRANSFORMERS_OFFLINE: '1'
+      HF_HOME: /tmp/tastemm-empty-cache
+      TOKENIZERS_PARALLELISM: 'false'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.10'
+          architecture: arm64
+      - name: Check native Apple Silicon and Tk
+        run: |
+          python - <<'PY'
+          import platform, tkinter as tk
+          assert platform.machine() == 'arm64', platform.machine()
+          root = tk.Tk()
+          root.withdraw()
+          print(platform.platform(), platform.machine(), tk.TclVersion, root.tk.call('info', 'patchlevel'))
+          root.update()
+          root.destroy()
+          PY
+      - name: Install inference and build dependencies
+        run: |
+          python -m pip install --only-binary=:all: -r requirements.txt
+          python -m pip freeze > environment_build_macos.txt
+          python -m pip check
+      - name: Recover verified Linux model resources
+        run: python fetch_linux_bundle.py
+      - name: Validate source inference
+        run: |
+          mkdir -p releases
+          python launch.py --self-test --report releases/validation-source-macOS-arm64.json
+      - name: Build native application
+        run: python build.py
+      - name: Stage notices and provenance; sign app
+        run: python stage_release.py
+      - name: Validate frozen application and create ZIP
+        run: python package_release.py --validate
+      - name: Validate relocated ZIP and offline execution
+        run: python validate_macos_archive.py
+      - name: Collect validation and build records
+        if: always()
+        run: |
+          mkdir -p releases
+          cp environment_build_macos.txt releases/ 2>/dev/null || true
+          cp BUILD_PROVENANCE.json releases/ 2>/dev/null || true
+          cp dist/build_manifest.json releases/ 2>/dev/null || true
+          cp build/TasteMM/warn-TasteMM.txt releases/ 2>/dev/null || true
+          cp RELEASE_MACOS.txt BUILD_MACOS.txt LICENSE LICENSE_SCOPE.txt releases/
+          if [ -f "$TMPDIR/TasteMM-error.log" ]; then cp "$TMPDIR/TasteMM-error.log" releases/; fi
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        if: always()
+        with:
+          name: TasteMM-macOS-arm64-preview
+          path: desktop/releases/*
+          if-no-files-found: error
+          retention-days: 30

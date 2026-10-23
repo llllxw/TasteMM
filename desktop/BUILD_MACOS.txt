@@ -1,0 +1,20 @@
+Native Apple Silicon build (Python 3.10 with Tkinter).
+
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python fetch_linux_bundle.py
+python -m pip freeze > environment_build_macos.txt
+python build.py
+python stage_release.py
+python package_release.py --validate
+python validate_macos_archive.py
+
+The CI workflow runs on macos-15 and explicitly checks arm64, Tkinter and
+the Python-to-Tk image bridge. It records the actual dependency versions.
+The archive is created with ditto to preserve app symlinks and permissions.
+Validation covers native frozen inference, structure rendering, desktop
+single/batch/export workflows, relocated archive execution, code-signature
+integrity, and an inference run with network operations denied by sandbox-exec.
+The Mac workflow uploads artifacts; it does not publish a public Release.
+Ad-hoc signing is used. Apple Developer ID signing/notarization is separate.

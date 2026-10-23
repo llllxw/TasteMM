@@ -1,0 +1,46 @@
+TasteMM Desktop 0.1.0 - Windows x64 preview
+
+Extract the WHOLE ZIP, then open TasteMM/TasteMM.exe.
+Keep _internal and model_bundle beside TasteMM.exe. Do not copy the EXE alone.
+No Python installation, GPU or internet connection is needed for prediction.
+
+Single input: paste a molecular SMILES string and click Predict taste.
+Batch input: select Batch CSV and choose a UTF-8 CSV with a SMILES column.
+Other CSV columns are retained in the export. Select a result row to inspect
+its structure and six class probabilities. Click Export CSV to save results.
+Invalid and empty SMILES rows are retained and receive no prediction.
+
+This preview uses the exact model and resources from desktop-v0.1.0-linux:
+fold 0 checkpoint, temperature 1.8, six mutually exclusive taste classes.
+Salty predictions are exploratory (28 salty records in the development data).
+Probabilities describe the research model and are not sensory measurements.
+
+Compatibility: 64-bit Windows, CPU inference. The validation report identifies
+the actual tested Windows build; other Windows versions and machines need
+additional testing. The application is unsigned.
+
+IMPORTANT REPRODUCIBILITY LIMITATION
+This is a port of the Linux desktop preview, not a reimplementation of the
+current repository training pipeline. The desktop fingerprint is a truncated
+MACCS/Morgan/topological-torsion concatenation and its BERT representation is
+the first token. Repository main at 41d333bc0ff6ac332a85e680395c641a7d13c9f7
+uses MACCS/RDK/ECFP4 and attention-mask-aware mean pooling. These pipelines
+must be reconciled against the authoritative training run before presenting
+the preview as an exact deployment of the manuscript model.
+
+Verification reports and BUILD_PROVENANCE.json document the checks actually
+performed. Agreement with the small Linux reference set is a regression check,
+not a measurement of predictive accuracy or a reproduction of paper metrics.
+The current task did not retrain the model or reproduce all experimental runs.
+
+Source and project: https://github.com/llllxw/TasteMM
+Linux base release:
+https://github.com/llllxw/TasteMM/releases/tag/desktop-v0.1.0-linux
+Project code is licensed under MIT; see LICENSE and LICENSE_SCOPE.txt.
+Data, trained weights, pretrained resources and dependencies have separate terms.
+
+Diagnostics: startup failures save TasteMM-error.log in the user's TEMP folder.
+For automated checks from PowerShell:
+  .\TasteMM.exe --self-test --report inference.json
+  .\TasteMM.exe --self-test-ui --report drawing.json
+  .\TasteMM.exe --self-test-workflow --report workflow.json

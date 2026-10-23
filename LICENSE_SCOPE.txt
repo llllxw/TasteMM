@@ -1,0 +1,13 @@
+TasteMM project source code and author-created software documentation are
+licensed under the MIT License in LICENSE.
+Copyright (c) 2026 Xiaowei Liu.
+
+The project MIT grant does not relicense datasets, molecular records obtained
+from other sources, trained model weights, pretrained BERT resources, or
+third-party dependencies. Their applicable terms and provenance must be
+documented separately. No new permission for these resources is implied.
+
+Installed third-party dependency notices are included in THIRD_PARTY_LICENSES
+in the Windows distribution. Resources in model_bundle were preserved from
+the Linux preview. Its BERT model-card revision and separate resource license
+were not included in that release and still require provenance verification.

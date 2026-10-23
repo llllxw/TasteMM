@@ -1,0 +1,27 @@
+TasteMM Desktop: native builds
+
+This source folder is a standalone project. To use GitHub Actions, place its
+contents at the root of a repository, including .github/workflows.
+
+Local build on each target OS (Python 3.10 recommended):
+1. Create and activate a fresh virtual environment.
+2. On Linux/Windows, install CPU PyTorch:
+   python -m pip install torch==2.4.1 --index-url https://download.pytorch.org/whl/cpu
+   On macOS: python -m pip install torch==2.4.1
+3. python -m pip install -r requirements.txt
+4. Extract TasteMM-model-bundle.tar.gz into this folder, producing model_bundle/.
+5. python build.py
+6. python package_release.py --validate
+
+The releases/ folder contains the native archive, checksum and inference test
+report. Linux/Windows archives contain the executable, runtime and model_bundle.
+macOS archives contain TasteMM.app with the offline model inside Resources.
+
+For GitHub Actions, manually run Build TasteMM desktop with an HTTPS model
+archive URL and its SHA256. The workflow builds Linux x86_64, Windows x86_64
+and macOS on the runner's architecture. It uploads build artifacts without
+publishing a release. An Apple Developer signing/notarization identity is not
+configured; macOS builds use ad-hoc signing.
+
+Windows and macOS results must be checked on their native systems. A Linux
+build does not verify those systems. No model training is part of this process.

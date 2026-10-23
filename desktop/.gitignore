@@ -1,0 +1,12 @@
+.build_env/
+model_bundle/
+model_download.tar.gz
+build/
+dist/
+releases/
+preview_tools/
+__pycache__/
+*.spec
+*.log
+app_v1.py
+app_before_redesign.py

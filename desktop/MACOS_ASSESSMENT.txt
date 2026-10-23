@@ -1,0 +1,44 @@
+macOS feasibility assessment (2026-10-16, Asia/Shanghai)
+
+Apple Silicon: feasible in principle with the present dependencies.
+PyPI provides Python 3.10 arm64 wheels for torch 2.4.1, rdkit 2024.3.5,
+numpy 1.24.1, pandas 1.5.3, and Pillow 10.4.0. Tkinter must be available in
+the build Python. Use CPU inference first and preserve the offline resources.
+
+Intel Mac: requires a separate dependency plan. PyPI torch 2.4.1 has no
+macOS x86_64 wheel. torch 2.2.2 does have one. An Intel build can be attempted
+with a separate requirements file using torch 2.2.2, but checkpoint loading,
+all graph operators, numerical parity, and the frozen desktop workflows must
+be revalidated. That downgrade has NOT been tested in this task.
+
+Build on a native macOS host or a macOS CI runner. PyInstaller is not a
+Windows-to-macOS cross compiler. Prefer separate arm64 and x86_64 archives;
+a universal2 build requires all binary dependencies to contain both slices.
+The supplied build.py already stages resources inside TasteMM.app and uses
+ad-hoc signing. Ad-hoc signing is not Apple Developer ID signing/notarization.
+For low-friction public distribution, use Developer ID signing and Apple
+notarization, followed by a real downloaded-app Gatekeeper launch check.
+Never treat an unsigned/ad-hoc CI build as a verified public Mac release.
+
+Proposed acceptance checks on each target architecture:
+1. Install Python 3.10 with Tk; install the target-specific dependency pins.
+2. Supply model_bundle with the same file hashes as the Windows/Linux bundle.
+3. python build.py
+4. python package_release.py --validate
+5. Extract the archive into a new location and repeat offline inference,
+   real desktop single/batch/export tests, and structure rendering.
+6. Test signed/notarized application downloaded via a browser on a clean Mac.
+
+No macOS executable was built or tested in the present Windows session.
+Priority: Apple Silicon first; Intel only if needed and independently verified.
+
+Primary sources checked:
+https://pypi.org/pypi/torch/2.4.1/json
+https://pypi.org/pypi/torch/2.2.2/json
+https://pypi.org/pypi/rdkit/2024.3.5/json
+https://pypi.org/pypi/numpy/1.24.1/json
+https://pypi.org/pypi/pandas/1.5.3/json
+https://pypi.org/pypi/Pillow/10.4.0/json
+https://pyinstaller.org/en/stable/operating-mode.html
+https://pyinstaller.org/en/stable/feature-notes.html#macos-multi-arch-support
+https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution

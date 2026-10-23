@@ -195,3 +195,11 @@ TasteMM/
 ## 9. Citation
 
 If you use the dataset, model, or benchmark code, please cite the TasteMM manuscript and the original databases listed in `DATA_SOURCES.md`. 
+
+## License
+
+Project source code and author-created software documentation are licensed under the [MIT License](LICENSE). See [LICENSE_SCOPE.txt](LICENSE_SCOPE.txt) for resource scope.
+
+## Apple Silicon desktop build
+
+The `desktop/` folder contains the native arm64 macOS build, offline model recovery and executable validation scripts. `.github/workflows/build-macos-arm64.yml` builds on macos-15 and stores application and verification artifacts without publishing a Release. See [desktop/BUILD_MACOS.txt](desktop/BUILD_MACOS.txt).

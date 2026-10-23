@@ -1,0 +1,14 @@
+{
+  "platform": "Linux X11",
+  "checks": [
+    "result rendering",
+    "structure image",
+    "six-probability chart",
+    "invalid-row selection clears probabilities",
+    "single/batch modes",
+    "salty profile",
+    "empty result clears previous display"
+  ],
+  "passed": true,
+  "Windows_macOS_packaging": "waiting for user visual approval"
+}
