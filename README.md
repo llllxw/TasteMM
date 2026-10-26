@@ -51,7 +51,7 @@ The tests additionally verify both frozen manifests, degenerate contrastive-loss
 
 ## 2. Dataset and preprocessing
 
-The original experiment table is available directly as [`data/compound.csv`](data/compound.csv). It is a UTF-8 CSV with four columns (`ID`, `Name`, `SMILES`, and `Label`) and is readable without Python. The label map and a full data dictionary are provided in [`data/label_mapping.csv`](data/label_mapping.csv) and [`data/README.md`](data/README.md). Dataset provenance is summarized in [`DATA_SOURCES.md`](DATA_SOURCES.md).
+The current curated table is available directly as [`data/compound.csv`](data/compound.csv). It is a UTF-8 CSV with four columns (`ID`, `Name`, `SMILES`, and `Label`) and is readable without Python. The label map, data dictionary, and the 2026-10-26 dataset revision record are provided in [`data/label_mapping.csv`](data/label_mapping.csv) and [`data/README.md`](data/README.md). Dataset provenance is summarized in [`DATA_SOURCES.md`](DATA_SOURCES.md).
 
 | Taste | Label | Rows |
 | --- | ---: | ---: |

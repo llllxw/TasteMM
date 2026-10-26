@@ -1,6 +1,8 @@
 # Same-split model-comparison package
 
-This directory implements the reviewer-facing comparison protocol on the released 12,706-row dataset. Every model receives the same split-specific training, validation, and test rows. The split ID is retained as the pairing/blocking unit for statistical analysis.
+This directory implements the reviewer-facing comparison protocol on the original released 12,706-row dataset. Every model receives the same split-specific training, validation, and test rows. The split ID is retained as the pairing/blocking unit for statistical analysis.
+
+Dataset revision note (2026-10-26): `data/compound.csv` has been updated, while the manifests and scope-specific compound tables in this directory retain their original dataset snapshot. To reproduce those existing artifacts, use the dataset at commit `41d333bc0ff6ac332a85e680395c641a7d13c9f7`. Before running comparisons with the updated dataset, regenerate the applicable manifests and processed inputs using the preparation scripts below. This dataset replacement did not recompute benchmark results or retrain models. See [`data/README.md`](../../data/README.md) for the revision record and checksums.
 
 ## Included experiments
 
