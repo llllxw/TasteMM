@@ -79,6 +79,3 @@ python benchmarks/model_comparison/analyze_scope_matched.py --task scope5
 
 The primary inferential analysis treats the five matched split scores as blocked observations. It reports the overall model effect, Tukey-adjusted pairwise comparisons, paired mean differences with confidence intervals, and one-vs-rest analyses. With only five splits, statistical power is limited; effect sizes and confidence intervals should accompany adjusted p-values. Salty-taste inference is exploratory because the full dataset contains only 28 salty rows.
 
-No final comparison tables are bundled at present. The previously generated local tables were removed because they combined available CPU baselines with existing TasteMM outputs but did not contain a complete, verified set of GPU-server results. Add result tables only after every model in a comparison has predictions for the same five frozen test splits.
-
-The code covers all planned unified and scope-matched experiment definitions. Final tables still require verified GPU outputs for FART and the corresponding TasteMM scope runs. Outputs produced from older datasets or independent train/test splits must not be mixed with this matched-run analysis.
