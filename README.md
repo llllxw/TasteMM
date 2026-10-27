@@ -6,13 +6,17 @@ The sequence encoder is pinned to `google-bert/bert-base-uncased` revision `86b5
 
 This repository contains the released benchmark CSV, preprocessing and split-generation code, model training and inference code, calibration and selective-prediction metrics, interpretation utilities, matched molecular pair (MMP) analysis, a same-split model-comparison package, and a CPU-friendly installation test.
 
-## Desktop application — Linux preview
+## Desktop application
 
-[Download TasteMM for Linux x86_64](https://github.com/llllxw/TasteMM/releases/download/desktop-v0.1.0-linux/TasteMM-Linux-x86_64.tar.gz) · [Release notes, checksum and desktop source](https://github.com/llllxw/TasteMM/releases/tag/desktop-v0.1.0-linux)
+[TasteMM Desktop v0.1.0: downloads, matching source archives, model configuration and checksums](https://github.com/llllxw/TasteMM/releases/tag/desktop-v0.1.0).
 
-Extract the complete archive and run `./TasteMM/TasteMM`. The download includes the CPU runtime and model resources; prediction requires no Python installation, GPU or network connection. Keep the extracted directory intact.
+| Platform | Package | Start |
+| --- | --- | --- |
+| Linux x86_64 | [TasteMM-Linux-x86_64.tar.gz](https://github.com/llllxw/TasteMM/releases/download/desktop-v0.1.0/TasteMM-Linux-x86_64.tar.gz) | `./TasteMM/TasteMM` |
+| Windows x64 | [TasteMM-Windows-amd64.zip](https://github.com/llllxw/TasteMM/releases/download/desktop-v0.1.0/TasteMM-Windows-amd64.zip) | `TasteMM/TasteMM.exe` |
+| macOS Apple Silicon | [TasteMM-macOS-arm64.zip](https://github.com/llllxw/TasteMM/releases/download/desktop-v0.1.0/TasteMM-macOS-arm64.zip) | `TasteMM.app` |
 
-The desktop supports single-SMILES prediction, batch CSV input, molecular structure display, six-class probabilities and CSV export. This preview uses the existing fold 0 checkpoint with validation-derived temperature calibration. Salty predictions remain exploratory because the development dataset contains only 28 salty records. Windows and macOS packages are not yet available.
+Extract the complete archive and keep its contents together. The packages include the CPU runtime and model resources for offline prediction. The interface supports single-SMILES prediction, batch CSV input, molecular structure display, six-class probabilities and CSV export. Use the platform-specific source and configuration attached to the versioned release to reproduce its predictions.
 
 ## 1. Environment
 
@@ -47,17 +51,17 @@ pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-The tests additionally verify both frozen manifests, degenerate contrastive-loss batches, invalid-metric rejection, and strict model-comparison pairing with a deliberate sample-misalignment failure.
+The tests verify all four task manifests, degenerate contrastive-loss batches, invalid-metric rejection, and sample alignment in model comparisons.
 
 ## 2. Dataset and preprocessing
 
 The current curated table is available directly as [`data/compound.csv`](data/compound.csv). It is a UTF-8 CSV with four columns (`ID`, `Name`, `SMILES`, and `Label`) and is readable without Python. `ID` is an optional source/curation identifier, `Name` is the compound name, `SMILES` is the molecular representation, and `Label` is the integer taste class defined in [`data/label_mapping.csv`](data/label_mapping.csv). Use zero-based row indices as record identifiers; neither `ID` nor `SMILES` is a unique key.
 
-The 2026-10-27 revision contains 12,706 records and 10,885 distinct canonical structures, with no invalid SMILES or cross-label identical canonical structures in the current audit. Same-label duplicates remain. The repository CSV SHA-256 is `4b3fc2b850254cd1769a807941629b55e512da4bb7e09691d7ebd8a7dd68871b`. Earlier data versions remain available in Git history.
+The table contains 12,706 records. Its SHA-256 is `4b3fc2b850254cd1769a807941629b55e512da4bb7e09691d7ebd8a7dd68871b`. Structure validity, canonical-structure counts, same-label duplicates and cross-label structures are recorded in [`data/audit/dataset_audit.json`](data/audit/dataset_audit.json).
 
-Data were assembled from the taste databases and literature described in the TasteMM manuscript. Replacement entries also use explicit annotations from ChemTastesDB, PubChem/HSDB, TastePepMap, sensory publications, and patent sensory tables. These sources have different evidence levels; the current CSV does not include per-row provenance, and database annotations should not be treated as independently rechecked sensory experiments. Consult the original sources for attribution and terms of use.
+Data sources include the taste databases and literature cited in the TasteMM manuscript, ChemTastesDB, PubChem/HSDB, TastePepMap, sensory publications and patent sensory tables. Labels represent the collected source annotations. Consult the original sources for attribution and terms of use.
 
-Morgan fingerprints in `data_process.py` use `includeChirality=True` for both the default radius-2 generator and the custom-parameter branch. The default mixed fingerprint remains 3,239 bits (167 MACCS + 1,024 RDK + 2,048 Morgan). Regenerate processed fingerprints before training with this setting. Existing model packages and benchmark results have not been retrained or recomputed for this fingerprint setting or the dataset revision; old structure-dependent split manifests must also be regenerated for the revised data.
+Morgan fingerprints in `data_process.py` use `includeChirality=True` for both the default radius-2 generator and the custom-parameter branch. The default mixed fingerprint is 3,239 bits (167 MACCS + 1,024 RDK + 2,048 Morgan).
 
 | Taste | Label | Rows |
 | --- | ---: | ---: |
@@ -80,16 +84,20 @@ The audit verifies SMILES validity, counts classes and duplicates, canonicalizes
 Build the PyTorch Geometric data for five matched stratified 80/10/10 train/validation/test runs:
 
 ```bash
-python data_process.py --input_csv data/compound.csv --encoding utf-8
+python benchmarks/model_comparison/prepare_benchmark.py
+python benchmarks/model_comparison/prepare_scope_matched.py
+python data_process.py --input_csv data/compound.csv --encoding utf-8 --split_manifest benchmarks/model_comparison/manifests/six_class_split_manifest.csv
 ```
 
 For every run, the script creates stratified partitions containing approximately 80% training data, 10% validation data, and 10% test data. It saves `train_pyg.pt`, `val_pyg.pt`, `test_pyg.pt`, and a human-readable `split_manifest.csv` under `data/Multi/processed/fold_<n>/`.
+
+Splitting uses rows as the sampling unit with seed 42; identical structures are not grouped. The manifest audit records train/test canonical-structure overlap. Keep each checkpoint with its matching source CSV, feature configuration and split manifest.
 
 Supervised contrastive pretraining, graph-branch warm-up, and end-to-end fine-tuning use only the training partition of each run. The validation partition is used for early stopping, model selection, and temperature scaling; the test partition is used only for final evaluation.
 
 ## 3. Checkpoints and outputs
 
-Pretrained weights are not bundled in this repository. Running the training commands below creates one authoritative checkpoint under `runs/<run_name>/checkpoints/`. Each completed run also contains:
+Training writes a checkpoint under `runs/<run_name>/checkpoints/`. Each completed run also contains:
 
 - `result.json`: configuration, checkpoint path, metrics, calibration results, and training histories;
 - `artifacts/test_logits.npy`, `test_probs_raw.npy`, `test_labels.npy`, and `test_row_indices.npy`: raw test outputs and auditable source-row alignment;
@@ -112,13 +120,13 @@ Run all five matched splits and export mean and standard deviation:
 python train_5fold.py --folds 0,1,2,3,4 --seed 42 --out_dir runs --summary_csv results/tastemm_5fold_summary.csv
 ```
 
-To migrate an older completed run to the current auditable artifact schema without retraining, regenerate the matching processed data and re-evaluate its existing checkpoint:
+Re-evaluate a saved checkpoint using its matching processed data:
 
 ```bash
 python reevaluate_run.py --run-dir runs/fold0_seed42_baseline --processed-dir data/Multi/processed
 ```
 
-Repeat for split indices 0–4. This adds source-row indices, raw probabilities, embeddings, a prediction CSV, a relative checkpoint path, and a checkpoint hash.
+The command exports source-row indices, probabilities, embeddings, predictions and the checkpoint hash. It evaluates the saved weights without updating them.
 
 Predict new compounds from a CSV containing `ID`, `Name`, and `SMILES`:
 
@@ -134,6 +142,33 @@ The evaluation code reports accuracy, macro/weighted F1, class-wise and macro AU
 
 Six-class adaptations and original-label-range scope-matched experiments are kept separate. Model names use their original published forms, while each run configuration records the change in output space. Code and frozen manifests are included for TasteMolNet's three-class, Virtuous MultiTaste's four-class, and FART's five-class scopes. 
 
+```bash
+pip install -r requirements-benchmark.txt
+python benchmarks/model_comparison/run_tastemolnet_sixclass.py
+python benchmarks/model_comparison/run_virtuous_multitaste_sixclass.py
+python benchmarks/model_comparison/run_fart_sixclass.py
+python benchmarks/model_comparison/import_tastemm_results.py --run-root runs
+python benchmarks/model_comparison/analyze_benchmark.py
+```
+
+For scope-matched runs, use the corresponding scope CSV, manifest, class count and separate output directories:
+
+| Task | Manifest/CSV prefix | Classes | Comparator script |
+| --- | --- | ---: | --- |
+| `scope3` | `tastemolnet_scope3` | 3 | `run_tastemolnet_scope3.py` |
+| `scope4` | `virtuous_scope4` | 4 | `run_virtuous_multitaste_scope4.py` |
+| `scope5` | `fart_scope5` | 5 | `run_fart_scope5.py` |
+
+For example, run the three-class task with:
+
+```bash
+python data_process.py --input_csv benchmarks/model_comparison/scope_matched/manifests/tastemolnet_scope3_compound.csv --processed_dir data/Multi/processed_scope3 --num_classes 3 --split_manifest benchmarks/model_comparison/scope_matched/manifests/tastemolnet_scope3_split_manifest.csv
+python train_5fold.py --processed_dir data/Multi/processed_scope3 --num_classes 3 --out_dir runs_scope3 --summary_csv results/tastemm_scope3_summary.csv
+python benchmarks/model_comparison/run_tastemolnet_scope3.py
+python benchmarks/model_comparison/import_scope_tastemm_results.py --task scope3 --run-root runs_scope3
+python benchmarks/model_comparison/analyze_scope_matched.py --task scope3
+```
+
 ## 6. Interpretability and visualization
 
 ```bash
@@ -144,7 +179,7 @@ python gradient_based_attribution.py --help
 python plot_gradient_based_attribution.py --help
 ```
 
-`gradient_based_attribution.py` supports Integrated Gradients and gradient-times-input atom attribution. `plot_gradient_based_attribution.py` renders the exported atom table without relying on an unpublished helper module.
+`gradient_based_attribution.py` supports Integrated Gradients and gradient-times-input atom attribution. `plot_gradient_based_attribution.py` renders the exported atom table.
 
 ## 7. Matched molecular pair analysis
 
@@ -161,7 +196,7 @@ python mmp_analysis.py --stage A \
   --output_dir results/mmp
 ```
 
-Stage B uses the Stage A tables to calculate paired bootstrap confidence intervals, paired permutation tests, paired effect sizes, and Spearman attribution–prediction consistency statistics, and then creates the analysis panels. It does not require model checkpoints or retraining.
+Stage B uses the Stage A tables to calculate paired bootstrap confidence intervals, paired permutation tests, paired effect sizes, and Spearman attribution–prediction consistency statistics, and then creates the analysis panels.
 
 ```bash
 python mmp_analysis.py --stage B --output_dir results/mmp
@@ -190,7 +225,7 @@ TasteMM/
 ├── model.py                      # multimodal GATv2/fingerprint/BERT model
 ├── train.py                      # one-split training and evaluation
 ├── train_5fold.py                # five matched-run driver and mean/SD summary
-├── reevaluate_run.py             # migrate existing checkpoints without retraining
+├── reevaluate_run.py             # evaluate saved checkpoints and export artifacts
 ├── predict.py                    # inference on new SMILES
 ├── export_embedding_table.py     # auditable embedding-table export
 ├── calibration_metrics.py        # ECE, Brier, AURC, and EAURC

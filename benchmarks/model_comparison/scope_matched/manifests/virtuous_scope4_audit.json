@@ -28,8 +28,14 @@
     "3": 1271,
     "4": 1271
   },
-  "warning": "This reproduces the matched 80/10/10 row-level split logic; repeated structures are not grouped.",
+  "split_method": "Five matched stratified 80/10/10 train/validation/test splits with random_state=42",
+  "split_unit": "row",
+  "structure_grouping": false,
+  "software_versions": {
+    "pandas": "2.3.1",
+    "scikit-learn": "1.6.1"
+  },
   "source_file": "compound.csv",
-  "source_file_sha256": "2e7ac451259da567d370701ca8e7c8a3d800449405620b132b9868b2434e242d",
-  "split_manifest_sha256": "89e54767c03aed6d095f37e2544c1f8fd5f0be8b65bfdd30cb38779766c66cab"
+  "source_file_sha256": "4b3fc2b850254cd1769a807941629b55e512da4bb7e09691d7ebd8a7dd68871b",
+  "split_manifest_sha256": "5db1972a0b7c68ecba0b53f841ad0c428dd0f43d9889a1f3c24a527e08bb44d1"
 }

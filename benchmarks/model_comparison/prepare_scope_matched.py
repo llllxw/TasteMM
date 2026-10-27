@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn.model_selection import StratifiedKFold
 
 
@@ -113,7 +114,10 @@ def build_task(source: pd.DataFrame, task: ScopeTask) -> tuple[pd.DataFrame, pd.
             str(key): int(value)
             for key, value in manifest[manifest["partition"] == "test"].groupby("fold").size().items()
         },
-        "warning": "This reproduces the matched 80/10/10 row-level split logic; repeated structures are not grouped.",
+        "split_method": "Five matched stratified 80/10/10 train/validation/test splits with random_state=42",
+        "split_unit": "row",
+        "structure_grouping": False,
+        "software_versions": {"pandas": pd.__version__, "scikit-learn": sklearn.__version__},
     }
     return scope, manifest, audit
 
@@ -131,14 +135,14 @@ def main() -> None:
     for task in selected:
         scope, manifest, audit = build_task(source, task)
         prefix = task.filename_prefix
-        manifest.to_csv(args.output / f"{prefix}_split_manifest.csv", index=False, encoding="utf-8-sig")
+        manifest.to_csv(args.output / f"{prefix}_split_manifest.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
         manifest[manifest["partition"] == "test"].to_csv(
-            args.output / f"{prefix}_test_manifest.csv", index=False, encoding="utf-8-sig"
+            args.output / f"{prefix}_test_manifest.csv", index=False, encoding="utf-8-sig", lineterminator="\n"
         )
         server_csv = scope[["ID", "Name", "SMILES", "scope_label", "source_row_index", "sample_uid"]].rename(
             columns={"scope_label": "Label"}
         )
-        server_csv.to_csv(args.output / f"{prefix}_compound.csv", index=False, encoding="utf-8-sig")
+        server_csv.to_csv(args.output / f"{prefix}_compound.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
         audit["source_file"] = args.data.name
         audit["source_file_sha256"] = file_sha256(args.data)
         audit["split_manifest_sha256"] = file_sha256(args.output / f"{prefix}_split_manifest.csv")

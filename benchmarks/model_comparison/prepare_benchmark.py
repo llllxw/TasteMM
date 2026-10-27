@@ -6,7 +6,8 @@ import json
 from pathlib import Path
 
 import pandas as pd
-from rdkit import Chem
+import sklearn
+from rdkit import Chem, rdBase
 from sklearn.model_selection import StratifiedKFold
 
 
@@ -126,16 +127,17 @@ def main() -> None:
 
     args.output.mkdir(parents=True, exist_ok=True)
     manifest = reproduce_tastemm_splits(df)
-    manifest.to_csv(args.output / "six_class_split_manifest.csv", index=False, encoding="utf-8-sig")
+    manifest.to_csv(args.output / "six_class_split_manifest.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
 
     test_manifest = manifest[manifest["partition"] == "test"].copy()
-    test_manifest.to_csv(args.output / "six_class_test_manifest.csv", index=False, encoding="utf-8-sig")
+    test_manifest.to_csv(args.output / "six_class_test_manifest.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
 
     class_counts = df["Label"].astype(int).value_counts().sort_index()
     audit = {
         "source_file": args.data.name,
         "source_file_sha256": file_sha256(args.data),
         "split_manifest_sha256": file_sha256(args.output / "six_class_split_manifest.csv"),
+        "software_versions": {"pandas": pd.__version__, "scikit-learn": sklearn.__version__, "rdkit": rdBase.rdkitVersion},
         "n_rows": int(len(df)),
         "n_unique_ids": int(df["ID"].nunique(dropna=False)),
         "n_unique_smiles": int(df["SMILES"].nunique(dropna=False)),
@@ -149,7 +151,8 @@ def main() -> None:
             for k, v in test_manifest.groupby("fold").size().to_dict().items()
         },
         "canonical_structure_overlap": canonical_structure_overlap(manifest),
-        "warning": "Repeated structures may cross folds because the original TasteMM split was row-level.",
+        "split_unit": "row",
+        "structure_grouping": False,
     }
     with open(args.output / "dataset_and_split_audit.json", "w", encoding="utf-8") as handle:
         json.dump(audit, handle, ensure_ascii=False, indent=2)

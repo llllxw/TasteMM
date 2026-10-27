@@ -1,5 +1,7 @@
 {
-  "input_file": "data\\compound.csv",
+  "input_file": "data/compound.csv",
+  "input_file_sha256": "4b3fc2b850254cd1769a807941629b55e512da4bb7e09691d7ebd8a7dd68871b",
+  "rdkit_version": "2025.03.5",
   "rows": 12706,
   "columns": [
     "ID",
@@ -22,5 +24,5 @@
     "sour": 1700,
     "tasteless": 5010
   },
-  "interpretation_note": "This audit describes the released final table. It cannot recover how many records were excluded during source harmonization unless the pre-curation master table and exclusion log are also available. Missing source IDs are not counted as duplicate identifiers; row_index is the stable modeling key."
+  "interpretation_note": "Counts describe the input CSV. Duplicate row counts include all members of each group. Missing source IDs are excluded from duplicate-ID counts. Canonical SMILES preserve stereochemistry; row_index is zero-based."
 }
