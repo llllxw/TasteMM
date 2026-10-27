@@ -51,7 +51,13 @@ The tests additionally verify both frozen manifests, degenerate contrastive-loss
 
 ## 2. Dataset and preprocessing
 
-The current curated table is available directly as [`data/compound.csv`](data/compound.csv). It is a UTF-8 CSV with four columns (`ID`, `Name`, `SMILES`, and `Label`) and is readable without Python. The label map, data dictionary, and the 2026-10-27 dataset revision record are provided in [`data/label_mapping.csv`](data/label_mapping.csv) and [`data/README.md`](data/README.md). Dataset provenance is summarized in [`DATA_SOURCES.md`](DATA_SOURCES.md).
+The current curated table is available directly as [`data/compound.csv`](data/compound.csv). It is a UTF-8 CSV with four columns (`ID`, `Name`, `SMILES`, and `Label`) and is readable without Python. `ID` is an optional source/curation identifier, `Name` is the compound name, `SMILES` is the molecular representation, and `Label` is the integer taste class defined in [`data/label_mapping.csv`](data/label_mapping.csv). Use zero-based row indices as record identifiers; neither `ID` nor `SMILES` is a unique key.
+
+The 2026-10-27 revision contains 12,706 records and 10,885 distinct canonical structures, with no invalid SMILES or cross-label identical canonical structures in the current audit. Same-label duplicates remain. The repository CSV SHA-256 is `4b3fc2b850254cd1769a807941629b55e512da4bb7e09691d7ebd8a7dd68871b`. Earlier data versions remain available in Git history.
+
+Data were assembled from the taste databases and literature described in the TasteMM manuscript. Replacement entries also use explicit annotations from ChemTastesDB, PubChem/HSDB, TastePepMap, sensory publications, and patent sensory tables. These sources have different evidence levels; the current CSV does not include per-row provenance, and database annotations should not be treated as independently rechecked sensory experiments. Consult the original sources for attribution and terms of use.
+
+Morgan fingerprints in `data_process.py` use `includeChirality=True` for both the default radius-2 generator and the custom-parameter branch. The default mixed fingerprint remains 3,239 bits (167 MACCS + 1,024 RDK + 2,048 Morgan). Regenerate processed fingerprints before training with this setting. Existing model packages and benchmark results have not been retrained or recomputed for this fingerprint setting or the dataset revision; old structure-dependent split manifests must also be regenerated for the revised data.
 
 | Taste | Label | Rows |
 | --- | ---: | ---: |
@@ -194,4 +200,4 @@ TasteMM/
 
 ## 9. Citation
 
-If you use the dataset, model, or benchmark code, please cite the TasteMM manuscript and the original databases listed in `DATA_SOURCES.md`. 
+If you use the dataset, model, or benchmark code, please cite the TasteMM manuscript and the original data sources cited there.
