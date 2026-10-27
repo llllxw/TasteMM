@@ -1,5 +1,5 @@
 {
-  "input_file": "data/compound.csv",
+  "input_file": "data\\compound.csv",
   "rows": 12706,
   "columns": [
     "ID",
@@ -8,12 +8,12 @@
     "Label"
   ],
   "invalid_smiles_rows": 0,
-  "missing_id_rows": 3201,
+  "missing_id_rows": 3101,
   "duplicate_nonmissing_id_rows": 0,
-  "duplicate_exact_smiles_rows": 3693,
-  "unique_canonical_smiles": 10745,
-  "canonical_structures_with_multiple_labels": 110,
-  "rows_in_cross_label_structures": 251,
+  "duplicate_exact_smiles_rows": 3444,
+  "unique_canonical_smiles": 10885,
+  "canonical_structures_with_multiple_labels": 0,
+  "rows_in_cross_label_structures": 0,
   "class_counts": {
     "bitter": 3005,
     "sweet": 2635,

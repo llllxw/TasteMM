@@ -2,7 +2,17 @@
 
 `compound.csv` is the current curated compound-level table for the six-class TasteMM project. It is UTF-8 CSV with a byte-order mark and can be opened directly in Excel, R, Python, or a text editor.
 
-## Dataset update on 2026-10-26
+## Current dataset update on 2026-10-27
+
+`compound.csv` now contains the author's revised 12,706-row single-label `dataset.csv`. Class counts remain unchanged. This revision replaces excluded cross-label-conflict and composition/identity records with new source-annotated entries and retains the evidence-based citric-acid label correction. All CSV values and row order match the supplied file; only CRLF line endings were normalized to LF for this repository.
+
+- Supplied file SHA-256: `65c0180c938f341a547fcd65ead209bddf7edba9dbec45f8b2efccb884b9e0c4`.
+- Repository CSV SHA-256: `4b3fc2b850254cd1769a807941629b55e512da4bb7e09691d7ebd8a7dd68871b`.
+- Audit regenerated with RDKit 2024.03.5: 0 invalid SMILES; 0 canonical structures associated with multiple labels (0 affected rows).
+- Same-label duplicates remain: 10,885 distinct canonical structures across 12,706 records. This update is not a claim of complete structural deduplication or independent experimental confirmation of every database annotation.
+- The previous repository data remain available in Git history at commit `11c0b7e`. This update does not upload the separate multilabel evaluation set, retrain models, or recompute existing benchmark manifests/results. Regenerate structure-dependent preprocessing and splits before training on this revision.
+
+## Previous dataset update on 2026-10-26
 
 The table was replaced with the author's updated `dataset.csv` from the second revision. Its GB18030 text encoding was converted to UTF-8 and line endings were normalized to LF; all CSV field values and row order were preserved. Relative to the previous table, 7,904 SMILES fields and 13 compound names changed. IDs, labels, row order, and class counts are unchanged.
 
@@ -16,7 +26,7 @@ Existing benchmark manifests and desktop model packages were produced before thi
 
 | Column | Meaning |
 | --- | --- |
-| `ID` | Source/curation identifier retained when available; it is not a unique key and 3,201 rows are missing it |
+| `ID` | Source/curation identifier retained when available; it is not a unique key and 3,101 rows are missing it |
 | `Name` | Compound name retained during curation |
 | `SMILES` | Molecular structure string used to construct all three model inputs |
 | `Label` | Integer taste class; see `label_mapping.csv` |
@@ -35,4 +45,4 @@ The released final table does not contain the pre-curation records or a row-leve
 
 The stable key for the released CSV is its zero-based `row_index`; benchmark manifests additionally provide a deterministic `sample_uid`. Neither `ID` nor `SMILES` should be used as a unique key.
 
-The current canonical-SMILES audit identifies 110 structures associated with more than one label (251 rows). Accordingly, “single-label” describes the learning target attached to each row; it should not be interpreted as proof that every chemical structure has only one possible taste. The complete rows are reported in `audit/cross_label_structures.csv`.
+The current canonical-isomeric-SMILES audit identifies 0 structures associated with more than one label (0 rows). The file `audit/cross_label_structures.csv` therefore contains only its header. This within-table check does not establish that a compound cannot have multiple tastes under other experimental conditions; same-label structural duplicates remain.

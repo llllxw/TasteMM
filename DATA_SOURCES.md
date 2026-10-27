@@ -5,3 +5,5 @@ The curated TasteMM table was assembled from the resources described in the manu
 Compound names, SMILES strings, and taste annotations were harmonized into a single table, followed by manual quality control, duplicate handling, and SMILES standardization. The current released CSV does not preserve a per-row source field, so the repository must not be used to infer which source contributed an individual row. Full citations and access dates should be maintained in the manuscript reference list.
 
 Users should consult the original resources for their current terms of use and database-specific attribution requirements.
+
+The 2026-10-27 replacement entries additionally draw on explicit annotations in ChemTastesDB, PubChem/HSDB, TastePepMap, sensory publications, and patent sensory tables. Evidence types differ: database-curated annotations are not equivalent to independent rechecking of every original sensory experiment. No taste labels were inferred from model predictions for this update. See `data/README.md` for the version and file hashes.
