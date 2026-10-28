@@ -1,7 +1,7 @@
 name: Build TasteMM macOS Apple Silicon
 on:
   push:
-    branches: [build/macos-arm64-preview-20261023]
+    branches: [build/macos-arm64]
   workflow_dispatch:
 permissions:
   contents: read
@@ -67,7 +67,7 @@ jobs:
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         if: always()
         with:
-          name: TasteMM-macOS-arm64-preview
+          name: TasteMM-macOS-arm64
           path: desktop/releases/*
           if-no-files-found: error
           retention-days: 30
