@@ -1,4 +1,4 @@
-"""Inference features copied unchanged from the verified training implementation."""
+"""Feature extraction for the versioned TasteMM desktop checkpoint."""
 
 import numpy as np
 import torch

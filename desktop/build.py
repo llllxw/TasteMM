@@ -77,7 +77,7 @@ help_text = ('TasteMM Desktop\n\n'
              'Single molecule: enter SMILES, then click Predict taste.\n'
              'Batch CSV: choose a UTF-8 CSV with a SMILES column.\n'
              'Select a result to view its structure and six probabilities. Export CSV saves all results.\n\n'
-             'This release reuses the existing fold 0 model and validation-derived temperature.\n'
+             'Model configuration: fold 0 checkpoint and validation-derived temperature.\n'
              'It is a single-label research model. Salty results remain exploratory because the development dataset has 28 salty records.\n')
 help_destination = distribution / 'Contents/Resources/HELP.txt' if sys.platform == 'darwin' else distribution / 'HELP.txt'
 help_destination.write_text(help_text, encoding='utf-8')

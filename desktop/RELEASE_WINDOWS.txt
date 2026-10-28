@@ -1,46 +1,35 @@
-TasteMM Desktop 0.1.0 - Windows x64 preview
+TasteMM Desktop v0.1.0
 
-Extract the WHOLE ZIP, then open TasteMM/TasteMM.exe.
-Keep _internal and model_bundle beside TasteMM.exe. Do not copy the EXE alone.
-No Python installation, GPU or internet connection is needed for prediction.
+Download Linux x86_64, Windows x64 and macOS Apple Silicon packages, matching
+source archives and SHA-256 checksums from:
+https://github.com/llllxw/TasteMM/releases/tag/desktop-v0.1.0
 
-Single input: paste a molecular SMILES string and click Predict taste.
-Batch input: select Batch CSV and choose a UTF-8 CSV with a SMILES column.
-Other CSV columns are retained in the export. Select a result row to inspect
-its structure and six class probabilities. Click Export CSV to save results.
-Invalid and empty SMILES rows are retained and receive no prediction.
+Extract the complete archive and keep its contents together.
+Windows: open TasteMM/TasteMM.exe.
+macOS Apple Silicon: open TasteMM.app.
+Linux: run ./TasteMM/TasteMM.
+The packages include the CPU runtime and offline model resources.
 
-This preview uses the exact model and resources from desktop-v0.1.0-linux:
-fold 0 checkpoint, temperature 1.8, six mutually exclusive taste classes.
-Salty predictions are exploratory (28 salty records in the development data).
-Probabilities describe the research model and are not sensory measurements.
+Enter one SMILES string or import a UTF-8 CSV containing a SMILES column.
+Select a result to view the molecular structure and six class probabilities.
+Export CSV saves predictions, input columns and invalid/empty input status.
 
-Compatibility: 64-bit Windows, CPU inference. The validation report identifies
-the actual tested Windows build; other Windows versions and machines need
-additional testing. The application is unsigned.
+Desktop model configuration: fold 0 checkpoint, temperature 1.8, single-label
+output ordered as bitter, sweet, umami, salty, sour, tasteless.
+The development dataset contains 28 salty records. Probabilities are model
+estimates. Validation reports record inference regression on reference inputs.
 
-IMPORTANT REPRODUCIBILITY LIMITATION
-This is a port of the Linux desktop preview, not a reimplementation of the
-current repository training pipeline. The desktop fingerprint is a truncated
-MACCS/Morgan/topological-torsion concatenation and its BERT representation is
-the first token. Repository main at 41d333bc0ff6ac332a85e680395c641a7d13c9f7
-uses MACCS/RDK/ECFP4 and attention-mask-aware mean pooling. These pipelines
-must be reconciled against the authoritative training run before presenting
-the preview as an exact deployment of the manuscript model.
+Desktop features: MACCS/Morgan/topological torsion concatenation truncated to
+3,239 bits, with the first BERT token as the sequence representation.
+Use the matching release source, feature configuration and bundled checkpoint
+to reproduce package predictions. Repository training features are defined
+separately in data_process.py.
 
-Verification reports and BUILD_PROVENANCE.json document the checks actually
-performed. Agreement with the small Linux reference set is a regression check,
-not a measurement of predictive accuracy or a reproduction of paper metrics.
-The current task did not retrain the model or reproduce all experimental runs.
+Windows signing: unsigned. macOS signing: ad-hoc, without notarization.
+macOS first-launch instructions:
+https://support.apple.com/guide/mac-help/mh40616/mac
+The validation records identify tested operating systems and architectures.
 
-Source and project: https://github.com/llllxw/TasteMM
-Linux base release:
-https://github.com/llllxw/TasteMM/releases/tag/desktop-v0.1.0-linux
-Project code is licensed under MIT; see LICENSE and LICENSE_SCOPE.txt.
-Data, trained weights, pretrained resources and dependencies have separate terms.
-
-Diagnostics: startup failures save TasteMM-error.log in the user's TEMP folder.
-For automated checks from PowerShell:
-  .\TasteMM.exe --self-test --report inference.json
-  .\TasteMM.exe --self-test-ui --report drawing.json
-  .\TasteMM.exe --self-test-workflow --report workflow.json
+Project code: MIT. See LICENSE and LICENSE_SCOPE.txt for resource terms.
+Executable checks: --self-test, --self-test-ui, --self-test-workflow.
+Pass --report followed by a writable JSON file path to save a report.
