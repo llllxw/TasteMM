@@ -57,7 +57,7 @@ The tests verify all four task manifests, degenerate contrastive-loss batches, i
 
 The current curated table is available directly as [`data/compound.csv`](data/compound.csv). It is a UTF-8 CSV with four columns (`ID`, `Name`, `SMILES`, and `Label`) and is readable without Python. `ID` is an optional source/curation identifier, `Name` is the compound name, `SMILES` is the molecular representation, and `Label` is the integer taste class defined in [`data/label_mapping.csv`](data/label_mapping.csv). Use zero-based row indices as record identifiers; neither `ID` nor `SMILES` is a unique key.
 
-The table contains 12,706 records. Its SHA-256 is `4b3fc2b850254cd1769a807941629b55e512da4bb7e09691d7ebd8a7dd68871b`. Structure validity, canonical-structure counts, same-label duplicates and cross-label structures are recorded in [`data/audit/dataset_audit.json`](data/audit/dataset_audit.json).
+The table contains 12,706 records. Its SHA-256 is `4b3fc2b850254cd1769a807941629b55e512da4bb7e09691d7ebd8a7dd68871b`. 
 
 Data sources include the taste databases and literature cited in the TasteMM manuscript, ChemTastesDB, PubChem/HSDB, TastePepMap, sensory publications and patent sensory tables. Labels represent the collected source annotations. Consult the original sources for attribution and terms of use.
 
