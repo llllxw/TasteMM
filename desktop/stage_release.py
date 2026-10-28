@@ -8,7 +8,6 @@ import shutil
 import sys
 import subprocess
 from datetime import datetime, timezone
-
 root = Path(__file__).resolve().parent
 mac = sys.platform == 'darwin'
 distribution = root / 'dist' / ('TasteMM.app' if mac else 'TasteMM')
@@ -23,27 +22,9 @@ def sha256(path):
         for block in iter(lambda: stream.read(1024 * 1024), b''):
             digest.update(block)
     return digest.hexdigest()
-
-files = {str(p.relative_to(root)).replace('\\', '/'): sha256(p)
-         for p in sorted((root / 'model_bundle').rglob('*')) if p.is_file()}
+files = {str(p.relative_to(root)).replace('\\', '/'): sha256(p) for p in sorted((root / 'model_bundle').rglob('*')) if p.is_file()}
 assert files['model_bundle/model.pth'] == '767c919782879488a258a2d942ada03766d25d0f13494ac49cce3ddb1f8d45da'
-provenance = {
-    'release': ('macOS Apple Silicon' if mac else 'Windows x64') + ' preview; port of desktop-v0.1.0-linux',
-    'built_at_utc': datetime.now(timezone.utc).isoformat(),
-    'platform': platform.platform(), 'machine': platform.machine(), 'python': sys.version,
-    'desktop_source_base_sha256': 'db6eba45e903f059623c15d43e1f3425087d4e70a1f4362e325516bcbb6f91ed',
-    'linux_archive_sha256': 'c54d0e8e77995ad5e2fe0af4d44d2864d59ecdc3b046c71d33ee49abfb6ff81d',
-    'comparison_repository_commit': '41d333bc0ff6ac332a85e680395c641a7d13c9f7',
-    'model_manifest': json.loads((root / 'model_bundle/manifest.json').read_text()),
-    'model_file_sha256': files,
-    'inference_source_sha256': {p: sha256(root / p) for p in ['engine.py', 'features.py', 'tastemm_engine/model.py']},
-    'installed_packages': dict(sorted((d.metadata['Name'], d.version) for d in metadata.distributions())),
-    'training_performed': False, 'manuscript_metrics_reproduced': False,
-    'pipeline_reconciliation_required': True,
-    'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
-    'software_license': 'MIT',
-    'code_signing': 'ad-hoc; not notarized' if mac else 'unsigned',
-}
+provenance = {'release': ('macOS Apple Silicon' if mac else 'Windows x64') + ' preview; port of desktop-v0.1.0-linux', 'built_at_utc': datetime.now(timezone.utc).isoformat(), 'platform': platform.platform(), 'machine': platform.machine(), 'python': sys.version, 'desktop_source_base_sha256': 'fc14643a9e06a98b8abcd82985a7a2f6fd0b144b38568932202bccdb5801b2f8', 'linux_archive_sha256': 'f2bc89592191200a3ce64084c40acb645eb125e7452fb0f1be3f7bab0161935e', 'comparison_repository_commit': '41d333bc0ff6ac332a85e680395c641a7d13c9f7', 'model_manifest': json.loads((root / 'model_bundle/manifest.json').read_text()), 'model_file_sha256': files, 'inference_source_sha256': {p: sha256(root / p) for p in ['engine.py', 'features.py', 'tastemm_engine/model.py']}, 'installed_packages': dict(sorted(((d.metadata['Name'], d.version) for d in metadata.distributions()))), 'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(), 'software_license': 'MIT', 'code_signing': 'ad-hoc; not notarized' if mac else 'unsigned'}
 (root / 'BUILD_PROVENANCE.json').write_text(json.dumps(provenance, indent=2), encoding='utf-8')
 names = ['LICENSE', 'LICENSE_SCOPE.txt', 'BUILD_PROVENANCE.json']
 names += ['RELEASE_MACOS.txt', 'BUILD_MACOS.txt', 'environment_build_macos.txt'] if mac else ['RELEASE_WINDOWS.txt', 'MACOS_ASSESSMENT.txt', 'environment_build_windows.txt']
@@ -55,7 +36,7 @@ notices = target / 'THIRD_PARTY_LICENSES'
 notices.mkdir(exist_ok=True)
 for dist in metadata.distributions():
     for file in dist.files or []:
-        if any(word in file.name.lower() for word in ['license', 'copying', 'notice']):
+        if any((word in file.name.lower() for word in ['license', 'copying', 'notice'])):
             source = Path(dist.locate_file(file))
             if source.is_file() and source.suffix.lower() not in ['.py', '.pyc', '.pyd']:
                 output = notices / dist.metadata['Name'] / str(file).replace('..', '_')
