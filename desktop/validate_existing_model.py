@@ -1,4 +1,4 @@
-"""Compare desktop inference with archived test logits; does not train."""
+"""Compare desktop checkpoint inference with archived reference logits."""
 import argparse
 import json
 from pathlib import Path

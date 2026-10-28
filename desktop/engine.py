@@ -1,4 +1,4 @@
-"""Offline inference using existing weights; never trains or changes structures."""
+"""Offline prediction using the bundled checkpoint and input SMILES."""
 import json
 import sys
 from pathlib import Path

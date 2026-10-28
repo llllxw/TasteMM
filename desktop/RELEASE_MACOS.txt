@@ -1,37 +1,35 @@
-TasteMM Desktop 0.1.0 - macOS Apple Silicon preview
+TasteMM Desktop v0.1.0
 
-For Apple Silicon Macs (M series); native arm64 application.
-Extract the ZIP and open TasteMM.app. You can move the whole app to Applications.
-The CPU runtime and offline model are inside the app. Do not remove its contents.
-No Python installation, GPU setup, or internet connection is needed to predict.
+Download Linux x86_64, Windows x64 and macOS Apple Silicon packages, matching
+source archives and SHA-256 checksums from:
+https://github.com/llllxw/TasteMM/releases/tag/desktop-v0.1.0
 
-Single input: paste a SMILES string and click Predict taste.
-Batch input: choose a UTF-8 CSV containing a SMILES column in the Batch CSV tab.
-Select a result to view its structure and six probabilities; Export CSV saves
-all results, including invalid/empty rows and additional input columns.
+Extract the complete archive and keep its contents together.
+Windows: open TasteMM/TasteMM.exe.
+macOS Apple Silicon: open TasteMM.app.
+Linux: run ./TasteMM/TasteMM.
+The packages include the CPU runtime and offline model resources.
 
-This is a research preview with ad-hoc signing, without Apple Developer ID
-signing or notarization. macOS may require an explicit first-launch approval.
-Consult Apple's instructions for opening an app from an unidentified developer.
-The included validation records identify the tested macOS/architecture.
-Intel Macs and other macOS versions have not been validated by this build.
+Enter one SMILES string or import a UTF-8 CSV containing a SMILES column.
+Select a result to view the molecular structure and six class probabilities.
+Export CSV saves predictions, input columns and invalid/empty input status.
 
-The model and resources are unchanged from desktop-v0.1.0-linux: fold 0,
-temperature 1.8, six mutually exclusive classes. Salty predictions remain
-exploratory (28 salty development records); probabilities are model estimates.
+Desktop model configuration: fold 0 checkpoint, temperature 1.8, single-label
+output ordered as bitter, sweet, umami, salty, sour, tasteless.
+The development dataset contains 28 salty records. Probabilities are model
+estimates. Validation reports record inference regression on reference inputs.
 
-This desktop preview preserves the Linux deployment pipeline. Its truncated
-MACCS/Morgan/topological-torsion fingerprint and first-token BERT representation
-differ from repository main at 41d333bc0ff6ac332a85e680395c641a7d13c9f7,
-which uses MACCS/RDK/ECFP4 and masked mean pooling. Reconcile these against
-the authoritative training run before claiming exact manuscript deployment.
-The reference checks verify inference regression, not paper accuracy metrics.
+Desktop features: MACCS/Morgan/topological torsion concatenation truncated to
+3,239 bits, with the first BERT token as the sequence representation.
+Use the matching release source, feature configuration and bundled checkpoint
+to reproduce package predictions. Repository training features are defined
+separately in data_process.py.
 
-Project code: MIT (LICENSE); resource scope: LICENSE_SCOPE.txt.
-Data, trained weights, pretrained resources, and dependencies have separate terms.
-Source: https://github.com/llllxw/TasteMM
+Windows signing: unsigned. macOS signing: ad-hoc, without notarization.
+macOS first-launch instructions:
+https://support.apple.com/guide/mac-help/mh40616/mac
+The validation records identify tested operating systems and architectures.
 
-Checks from Terminal (reports must point to a writable folder):
-  ./TasteMM.app/Contents/MacOS/TasteMM --self-test --report inference.json
-  ./TasteMM.app/Contents/MacOS/TasteMM --self-test-ui --report drawing.json
-  ./TasteMM.app/Contents/MacOS/TasteMM --self-test-workflow --report workflow.json
+Project code: MIT. See LICENSE and LICENSE_SCOPE.txt for resource terms.
+Executable checks: --self-test, --self-test-ui, --self-test-workflow.
+Pass --report followed by a writable JSON file path to save a report.
