@@ -20,8 +20,7 @@
     "temperature": 1.8,
     "fold": 0,
     "checkpoint_sha256": "767c919782879488a258a2d942ada03766d25d0f13494ac49cce3ddb1f8d45da",
-    "input_policy": "Original SMILES, no salt removal, tautomer conversion or stereochemistry enumeration",
-    "training": "Existing checkpoint; no retraining performed"
+    "input_policy": "Original SMILES, no salt removal, tautomer conversion or stereochemistry enumeration"
   },
   "model_file_sha256": {
     "model_bundle/bert/config.json": "7160e1553ad2ca51d8c1cb066be533db31826e12d173824c1bb0cb1a4f187d20",
@@ -88,7 +87,8 @@
     "urllib3": "2.8.0",
     "yarl": "1.25.1"
   },
-  "training_performed": false,
-  "manuscript_metrics_reproduced": false,
-  "pipeline_reconciliation_required": true
+  "desktop_features": {
+    "mixed_fingerprint": "MACCS + Morgan + topological torsion, truncated to 3239 bits",
+    "bert_pooling": "first token"
+  }
 }

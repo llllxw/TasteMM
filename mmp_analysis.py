@@ -2,8 +2,7 @@
 
 This single-file workflow reproduces the MMP construction, out-of-fold (OOF)
 contrastive Integrated Gradients, and the two population-level validation plots
-used in the revision. It reuses the public TasteMM model implementation in this
-directory and never retrains a model.
+using saved checkpoints and the TasteMM model implementation in this directory.
 
 Examples
 --------

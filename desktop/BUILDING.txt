@@ -24,4 +24,4 @@ publishing a release. An Apple Developer signing/notarization identity is not
 configured; macOS builds use ad-hoc signing.
 
 Windows and macOS results must be checked on their native systems. A Linux
-build does not verify those systems. No model training is part of this process.
+build does not verify those systems. This process packages the supplied checkpoint.

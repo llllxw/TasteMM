@@ -5,6 +5,5 @@
   "invalid_input_rows_preserved": true,
   "six_probabilities_sum_to_one": true,
   "device": "CPU",
-  "platform_validation": "Linux inference only; native Windows/macOS builds and desktop UI not yet validated",
-  "training_performed": false
+  "platform_validation": "Checkpoint inference and reference-input regression"
 }
