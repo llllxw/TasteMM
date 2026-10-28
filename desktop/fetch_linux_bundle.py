@@ -8,7 +8,7 @@ import urllib.request
 
 root = Path(__file__).resolve().parent
 url = 'https://github.com/llllxw/TasteMM/releases/download/desktop-v0.1.0-linux/TasteMM-Linux-x86_64.tar.gz'
-expected = 'c54d0e8e77995ad5e2fe0af4d44d2864d59ecdc3b046c71d33ee49abfb6ff81d'
+expected = 'f2bc89592191200a3ce64084c40acb645eb125e7452fb0f1be3f7bab0161935e'
 archive = root / 'model_download.tar.gz'
 urllib.request.urlretrieve(url, archive)
 digest = hashlib.sha256()
