@@ -1,4 +1,4 @@
-"""Re-export auditable artifacts from an existing TasteMM checkpoint without retraining."""
+"""Evaluate a saved TasteMM checkpoint and export prediction artifacts."""
 
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ def main() -> None:
     }
     save_run_artifacts(run_dir, payload, arrays)
     save_test_prediction_csv(run_dir, arrays, num_classes)
-    print(f"[DONE] Re-evaluated fold {fold} without retraining: {run_dir}")
+    print(f"[DONE] Re-evaluated fold {fold}: {run_dir}")
 
 
 if __name__ == "__main__":
