@@ -59,6 +59,8 @@ The current curated table is available directly as [`data/compound.csv`](data/co
 
 The table contains 12,706 records. Its SHA-256 is `4b3fc2b850254cd1769a807941629b55e512da4bb7e09691d7ebd8a7dd68871b`. 
 
+The multilabel dataset is available as [`data/multilabel_dataset.csv`](data/multilabel_dataset.csv) and contains 147 records with compound identifiers, names, SMILES, taste annotations, and source metadata. `Labels` lists semicolon-separated class IDs using the same taste-label definitions; the six `label_*` columns encode label membership as 0 or 1. These records are provided separately from the 12,706-record single-label benchmark.
+
 Data sources include the taste databases and literature cited in the TasteMM manuscript, ChemTastesDB, PubChem/HSDB, TastePepMap, sensory publications and patent sensory tables. Labels represent the collected source annotations. Consult the original sources for attribution and terms of use.
 
 Morgan fingerprints in `data_process.py` use `includeChirality=True` for both the default radius-2 generator and the custom-parameter branch. The default mixed fingerprint is 3,239 bits (167 MACCS + 1,024 RDK + 2,048 Morgan).
