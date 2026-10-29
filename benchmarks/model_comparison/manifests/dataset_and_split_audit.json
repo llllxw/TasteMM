@@ -1,13 +1,18 @@
 {
   "source_file": "compound.csv",
-  "source_file_sha256": "2e7ac451259da567d370701ca8e7c8a3d800449405620b132b9868b2434e242d",
-  "split_manifest_sha256": "edf55f145802a0f8a83c8af4a651bb1891979ace0b74255ad2cb9bca3119cf79",
+  "source_file_sha256": "4b3fc2b850254cd1769a807941629b55e512da4bb7e09691d7ebd8a7dd68871b",
+  "split_manifest_sha256": "22493199da61a27eb5842405965dd2fd4251a35ebad731aa073379a15467c837",
+  "software_versions": {
+    "pandas": "2.3.1",
+    "scikit-learn": "1.6.1",
+    "rdkit": "2025.03.5"
+  },
   "n_rows": 12706,
-  "n_unique_ids": 9506,
-  "n_unique_smiles": 12321,
-  "missing_id_rows": 3201,
+  "n_unique_ids": 9606,
+  "n_unique_smiles": 10885,
+  "missing_id_rows": 3101,
   "duplicate_nonmissing_id_rows_beyond_first": 0,
-  "duplicate_smiles_rows_beyond_first": 385,
+  "duplicate_smiles_rows_beyond_first": 1821,
   "class_counts": {
     "bitter": 3005,
     "sweet": 2635,
@@ -16,7 +21,7 @@
     "sour": 1700,
     "tasteless": 5010
   },
-  "split_method": "Exact reproduction of TasteMM row-level StratifiedKFold(5, shuffle=True, random_state=42), then held-out half split",
+  "split_method": "Five matched stratified 80/10/10 row-level train/validation/test splits with random_state=42",
   "test_rows_per_fold": {
     "0": 1271,
     "1": 1271,
@@ -27,34 +32,35 @@
   "canonical_structure_overlap": {
     "0": {
       "test_rows": 1271,
-      "test_rows_with_structure_in_train": 307,
-      "fraction_test_rows_with_structure_in_train": 0.24154209284028325,
-      "unique_test_structures_also_in_train": 302
+      "test_rows_with_structure_in_train": 276,
+      "fraction_test_rows_with_structure_in_train": 0.21715184893784423,
+      "unique_test_structures_also_in_train": 269
     },
     "1": {
       "test_rows": 1271,
-      "test_rows_with_structure_in_train": 291,
-      "fraction_test_rows_with_structure_in_train": 0.22895357985837922,
-      "unique_test_structures_also_in_train": 281
+      "test_rows_with_structure_in_train": 290,
+      "fraction_test_rows_with_structure_in_train": 0.22816679779701024,
+      "unique_test_structures_also_in_train": 285
     },
     "2": {
       "test_rows": 1271,
-      "test_rows_with_structure_in_train": 312,
-      "fraction_test_rows_with_structure_in_train": 0.24547600314712825,
-      "unique_test_structures_also_in_train": 307
+      "test_rows_with_structure_in_train": 285,
+      "fraction_test_rows_with_structure_in_train": 0.22423288749016523,
+      "unique_test_structures_also_in_train": 277
     },
     "3": {
       "test_rows": 1271,
-      "test_rows_with_structure_in_train": 282,
-      "fraction_test_rows_with_structure_in_train": 0.2218725413060582,
-      "unique_test_structures_also_in_train": 278
+      "test_rows_with_structure_in_train": 264,
+      "fraction_test_rows_with_structure_in_train": 0.2077104642014162,
+      "unique_test_structures_also_in_train": 256
     },
     "4": {
       "test_rows": 1271,
-      "test_rows_with_structure_in_train": 287,
-      "fraction_test_rows_with_structure_in_train": 0.22580645161290322,
-      "unique_test_structures_also_in_train": 282
+      "test_rows_with_structure_in_train": 298,
+      "fraction_test_rows_with_structure_in_train": 0.23446105428796224,
+      "unique_test_structures_also_in_train": 295
     }
   },
-  "warning": "Repeated structures may cross folds because the original TasteMM split was row-level."
+  "split_unit": "row",
+  "structure_grouping": false
 }

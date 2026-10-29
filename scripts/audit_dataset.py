@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
 import pandas as pd
-from rdkit import Chem
+from rdkit import Chem, rdBase
 
 LABEL_NAMES = {1: "bitter", 2: "sweet", 3: "umami", 4: "salty", 5: "sour", 6: "tasteless"}
 
@@ -55,16 +56,18 @@ def main():
     class_distribution["Taste"] = class_distribution["Label"].map(LABEL_NAMES)
     class_distribution["Fraction"] = class_distribution["Count"] / len(df)
     class_distribution = class_distribution[["Label", "Taste", "Count", "Fraction"]]
-    class_distribution.to_csv(output_dir / "class_distribution.csv", index=False, encoding="utf-8-sig")
+    class_distribution.to_csv(output_dir / "class_distribution.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
 
     conflict_keys = (
         df.groupby("Canonical_SMILES")["Label"].nunique().loc[lambda series: series > 1].index
     )
     conflicts = df[df["Canonical_SMILES"].isin(conflict_keys)].sort_values(["Canonical_SMILES", "Label", "ID"])
-    conflicts.to_csv(output_dir / "cross_label_structures.csv", index=False, encoding="utf-8-sig")
+    conflicts.to_csv(output_dir / "cross_label_structures.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
 
     summary = {
-        "input_file": str(input_path),
+        "input_file": input_path.as_posix(),
+        "input_file_sha256": hashlib.sha256(input_path.read_bytes()).hexdigest(),
+        "rdkit_version": rdBase.rdkitVersion,
         "rows": int(len(df)),
         "columns": required,
         "invalid_smiles_rows": int(len(invalid_smiles)),
@@ -76,9 +79,9 @@ def main():
         "rows_in_cross_label_structures": int(len(conflicts)),
         "class_counts": {LABEL_NAMES[int(row.Label)]: int(row.Count) for row in class_distribution.itertuples()},
         "interpretation_note": (
-            "This audit describes the released final table. It cannot recover how many records were excluded "
-            "during source harmonization unless the pre-curation master table and exclusion log are also available. "
-            "Missing source IDs are not counted as duplicate identifiers; row_index is the stable modeling key."
+            "Counts describe the input CSV. Duplicate row counts include all members of each group. "
+            "Missing source IDs are excluded from duplicate-ID counts. "
+            "Canonical SMILES preserve stereochemistry; row_index is zero-based."
         ),
     }
     (output_dir / "dataset_audit.json").write_text(
