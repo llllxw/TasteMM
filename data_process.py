@@ -25,7 +25,9 @@ MACCS_BITS = 167
 RDK_BITS = 1024
 ECFP_BITS = 2048
 MIXFP_DIM = MACCS_BITS + RDK_BITS + ECFP_BITS
-MORGAN_GENERATOR = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=ECFP_BITS)
+MORGAN_GENERATOR = rdFingerprintGenerator.GetMorganGenerator(
+    radius=2, fpSize=ECFP_BITS, includeChirality=True
+)
 
 ATOM_SYMBOLS = [
     "C", "H", "O", "N", "S", "P", "Cl", "Br", "F", "I",
@@ -204,7 +206,9 @@ def get_mix_fingerprint(smiles, radius=2, ecfp_bits=ECFP_BITS, rdk_bits=RDK_BITS
     if radius == 2 and ecfp_bits == ECFP_BITS:
         ecfp4 = np.array(MORGAN_GENERATOR.GetFingerprint(mol), dtype=np.float32)
     else:
-        generator = rdFingerprintGenerator.GetMorganGenerator(radius=radius, fpSize=ecfp_bits)
+        generator = rdFingerprintGenerator.GetMorganGenerator(
+            radius=radius, fpSize=ecfp_bits, includeChirality=True
+        )
         ecfp4 = np.array(generator.GetFingerprint(mol), dtype=np.float32)
     mixfp = np.concatenate([maccs, rdk, ecfp4])
     if mixfp.shape[0] != MIXFP_DIM:
